@@ -1,0 +1,9 @@
+# This directory will store documentation for complex bug fixes
+# Each fix should be a markdown file describing:
+# - The problem
+# - Investigation steps
+# - The solution
+# - Related code changes
+#
+# Example: fixes/resolve-race-condition-in-streak-calculation.md
+
