@@ -48,6 +48,19 @@ export const TodosView = () => {
   const [preselectedUserId, setPreselectedUserId] = useState<string | undefined>();
   const [forceRender, setForceRender] = useState(false);
   
+  // Listen for custom events from navigation plus button
+  useEffect(() => {
+    const handleOpenModal = () => {
+      console.log('TodosView: Opening modal from navigation plus button');
+      setEditingTask(undefined);
+      setPreselectedUserId(undefined);
+      setIsModalOpen(true);
+    };
+    
+    window.addEventListener('openTodosModal', handleOpenModal);
+    return () => window.removeEventListener('openTodosModal', handleOpenModal);
+  }, []);
+  
   // Force render after timeout to prevent infinite loading
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -187,11 +200,6 @@ export const TodosView = () => {
     setIsModalOpen(false);
   };
   
-  const handleAddTask = () => {
-    setEditingTask(undefined);
-    setPreselectedUserId(undefined);
-    setIsModalOpen(true);
-  };
   
   const handleAddTaskForUser = (userId: string) => {
     // Pre-populate task with user assignment
@@ -207,6 +215,15 @@ export const TodosView = () => {
       initial="hidden"
       animate="show"
     >
+      {/* Header with Add Task Button */}
+      <div className="mb-6 flex justify-between items-center relative">
+        <div>
+          <h2 className="text-5xl font-extrabold tracking-tight text-charcoal mb-2">
+            Family Tasks
+          </h2>
+        </div>
+        
+      </div>
       
       <div className="flex gap-6">
         {/* Main Content */}
@@ -278,18 +295,6 @@ export const TodosView = () => {
         </h2>
       </motion.div>
       
-      {/* Floating Action Button */}
-      <motion.button
-        onClick={handleAddTask}
-        className="fixed bottom-32 right-8 w-16 h-16 bg-blue text-cream rounded-full shadow-2xl flex items-center justify-center text-4xl font-bold tracking-tight z-20"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ scale: 0, rotate: -180 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: "spring", stiffness: 260, damping: 20 }}
-      >
-        +
-      </motion.button>
       
       {/* Task Modal */}
       <TaskModal

@@ -6,9 +6,9 @@ interface BreadcrumbProps {
 }
 
 const routeDescriptions = {
-  '/': 'Your family dashboard - see everyone\'s progress',
-  '/calendar': 'Family calendar - events and schedules',
-  '/todos': 'Task management - chores and to-dos',
+  '/': 'See everyone\'s progress',
+  '/calendar': 'Events and schedules',
+  '/todos': 'Tasks and to-dos',
   '/settings': 'App settings and preferences'
 };
 

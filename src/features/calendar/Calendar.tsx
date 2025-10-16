@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarEventModal } from '../../components/CalendarEventModal';
 import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent, useDeleteCalendarEvent } from '../../hooks/useCalendarEvents';
@@ -21,6 +21,19 @@ export const Calendar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | undefined>();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  
+  // Listen for custom events from navigation plus button
+  useEffect(() => {
+    const handleOpenModal = () => {
+      console.log('Calendar: Opening modal from navigation plus button');
+      setSelectedDate(new Date());
+      setEditingEvent(undefined);
+      setIsModalOpen(true);
+    };
+    
+    window.addEventListener('openCalendarModal', handleOpenModal);
+    return () => window.removeEventListener('openCalendarModal', handleOpenModal);
+  }, []);
   
   // Helper: Get 5 days starting from current date
   const getWeekDays = () => {
@@ -162,7 +175,7 @@ export const Calendar = () => {
   return (
     <main className="px-6 pb-40 overflow-y-auto h-full">
       {/* Header with View Toggle */}
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex justify-between items-center relative">
         <div className="flex items-center gap-4">
           <div>
             <h2 className="text-5xl font-extrabold tracking-tight text-charcoal mb-2">
@@ -171,6 +184,7 @@ export const Calendar = () => {
             {/* image.png */}
           </div>
         </div>
+        
         <div className="flex items-center gap-8">
           {/* Navigation */}
           <div className="flex gap-2">
@@ -459,23 +473,6 @@ export const Calendar = () => {
           </div>
         </div>
       )}
-        
-        {/* FAB for adding events */}
-        <motion.button
-          onClick={() => {
-            setSelectedDate(new Date());
-            setEditingEvent(undefined);
-            setIsModalOpen(true);
-          }}
-          className="fixed bottom-32 right-8 w-16 h-16 bg-purple text-cream rounded-full shadow-2xl flex items-center justify-center text-5xl font-bold tracking-tight z-[60]"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 260, damping: 20 }}
-        >
-          +
-        </motion.button>
         
         {/* Calendar Event Modal */}
         <CalendarEventModal
