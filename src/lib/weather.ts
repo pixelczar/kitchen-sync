@@ -179,7 +179,6 @@ export const getMeteoconsIcon = (icon: string): string => {
  * Get background color based on weather condition (using design system colors)
  */
 export const getWeatherBackgroundColor = (icon: string): string => {
-  const code = icon.slice(0, 2);
   const isNight = icon.endsWith('n');
   
   // Use design system purple for night, blue for day

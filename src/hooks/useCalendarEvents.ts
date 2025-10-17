@@ -19,6 +19,7 @@ const getStubCalendarEvents = (): CalendarEvent[] => {
       startTime: new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000 + 16 * 60 * 60 * 1000).toISOString(), // 2 days from now, 4pm
       endTime: new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000 + 17.5 * 60 * 60 * 1000).toISOString(), // 5:30pm
       assignedTo: 'user-1', // Emma
+      color: '#FF6B6B',
       location: 'Central Park',
       source: 'manual',
       createdAt: new Date().toISOString(),
@@ -32,6 +33,7 @@ const getStubCalendarEvents = (): CalendarEvent[] => {
       startTime: new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000).toISOString(), // 5 days from now, 6pm
       endTime: new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000 + 19.5 * 60 * 60 * 1000).toISOString(), // 7:30pm
       assignedTo: 'user-2', // Liam
+      color: '#4ECDC4',
       location: 'Music Hall',
       source: 'manual',
       createdAt: new Date().toISOString(),
@@ -45,6 +47,7 @@ const getStubCalendarEvents = (): CalendarEvent[] => {
       startTime: new Date(today.getTime() + 1 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000).toISOString(), // Tomorrow, 2pm
       endTime: new Date(today.getTime() + 1 * 24 * 60 * 60 * 1000 + 15 * 60 * 60 * 1000).toISOString(), // 3pm
       assignedTo: 'user-3', // Ava
+      color: '#45B7D1',
       location: 'Dr. Smith Dental',
       source: 'manual',
       createdAt: new Date().toISOString(),
@@ -58,6 +61,7 @@ const getStubCalendarEvents = (): CalendarEvent[] => {
       startTime: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000 + 15 * 60 * 60 * 1000).toISOString(), // 3 days from now, 3pm
       endTime: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000 + 16 * 60 * 60 * 1000).toISOString(), // 4pm
       assignedTo: 'user-4', // Noah
+      color: '#96CEB4',
       location: 'Community Pool',
       source: 'manual',
       createdAt: new Date().toISOString(),
@@ -71,6 +75,7 @@ const getStubCalendarEvents = (): CalendarEvent[] => {
       startTime: new Date(today.getTime() + 4 * 24 * 60 * 60 * 1000 + 19 * 60 * 60 * 1000).toISOString(), // 4 days from now, 7pm
       endTime: new Date(today.getTime() + 4 * 24 * 60 * 60 * 1000 + 21 * 60 * 60 * 1000).toISOString(), // 9pm
       assignedTo: 'user-1', // Emma
+      color: '#FF6B6B',
       location: 'Home',
       source: 'manual',
       createdAt: new Date().toISOString(),
@@ -84,6 +89,7 @@ const getStubCalendarEvents = (): CalendarEvent[] => {
       startTime: new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000 + 17 * 60 * 60 * 1000).toISOString(), // 6 days from now, 5pm
       endTime: new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000 + 18.5 * 60 * 60 * 1000).toISOString(), // 6:30pm
       assignedTo: 'user-2', // Liam
+      color: '#4ECDC4',
       location: 'School Gym',
       source: 'manual',
       createdAt: new Date().toISOString(),

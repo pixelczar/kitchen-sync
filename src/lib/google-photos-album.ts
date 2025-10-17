@@ -3,8 +3,6 @@
 
 import { GooglePhoto, GoogleAlbum, fetchAlbums, fetchPhotosFromAlbum } from './google-photos';
 
-const KITCHEN_SYNC_ALBUM_NAME = 'Kitchen Sync';
-
 /**
  * Find the Kitchen Sync album
  */
@@ -50,7 +48,7 @@ export const getKitchenSyncPhotos = async (
  * Create the Kitchen Sync album (if it doesn't exist)
  * Note: This requires additional API permissions and might need server-side implementation
  */
-export const createKitchenSyncAlbum = async (accessToken: string): Promise<GoogleAlbum | null> => {
+export const createKitchenSyncAlbum = async (_accessToken: string): Promise<GoogleAlbum | null> => {
   // This would require the Google Photos Library API album creation endpoint
   // For now, we'll just return null and let the user create it manually
   console.log('Please create an album called "Kitchen Sync" in Google Photos manually.');

@@ -1,5 +1,4 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect } from 'react';
 import { create } from 'zustand';
 
 export interface Toast {

@@ -19,6 +19,7 @@ export interface Task {
   id: string;
   householdId: string;
   title: string;
+  description?: string;
   type: 'chore' | 'todo';
   assignedTo?: string; // User ID
   completed: boolean;
@@ -49,6 +50,8 @@ export interface CalendarEvent {
   id: string;
   householdId: string;
   title: string;
+  description?: string;
+  location?: string;
   startTime: string; // ISO 8601
   endTime: string;
   assignedTo: string; // User ID

@@ -74,7 +74,8 @@ export const SettingsView = () => {
       console.log('Connected to Google Photos!', result);
     } catch (error) {
       console.error('Failed to connect:', error);
-      alert(`Failed to connect to Google Photos: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to connect to Google Photos: ${errorMessage}`);
     } finally {
       setIsConnecting(false);
     }

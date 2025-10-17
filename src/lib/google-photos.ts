@@ -1,7 +1,6 @@
 // Google Photos API Integration
 // Documentation: https://developers.google.com/photos
 
-const GOOGLE_PHOTOS_API_KEY = import.meta.env.VITE_GOOGLE_PHOTOS_API_KEY;
 const GOOGLE_PHOTOS_CLIENT_ID = import.meta.env.VITE_GOOGLE_PHOTOS_CLIENT_ID;
 
 // OAuth scopes for Google Photos

@@ -137,7 +137,7 @@ export const CalendarEventModal = ({ isOpen, onClose, onSave, event, mode, selec
             type="submit"
             variant="primary"
             className="flex-1"
-            disabled={!title.trim() || !startTime || !endTime}
+            disabled={!title.trim() || !startDate || !endDate}
           >
             {mode === 'add' ? 'Add Event' : 'Save Changes'}
           </Button>

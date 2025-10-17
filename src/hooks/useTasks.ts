@@ -154,9 +154,9 @@ export const useTaskMutations = () => {
       clearOptimisticTaskState(taskId);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
-    onError: ({ taskId }) => {
+    onError: (_error, variables) => {
       // Revert optimistic update on error
-      clearOptimisticTaskState(taskId);
+      clearOptimisticTaskState(variables.taskId);
     },
   });
 };
