@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test OAuth</title>
+</head>
+<body>
+    <h1>OAuth Test Page</h1>
+    <p>This page is accessible at: <code>http://localhost:5173/test-oauth.html</code></p>
+    
+    <h2>Test OAuth Flow</h2>
+    <button onclick="testOAuth()">Test Google Photos OAuth</button>
+    
+    <div id="result"></div>
+
+    <script>
+        function testOAuth() {
+            const clientId = '80037989963-ap60navboqm788cq1kbmbjbi9phfuq65.apps.googleusercontent.com';
+            const redirectUri = 'http://localhost:5173/google-auth-callback.html';
+            const scope = 'https://www.googleapis.com/auth/photoslibrary.readonly';
+            const state = 'test123';
+            
+            const authUrl = `https://accounts.google.com/oauth/authorize?` +
+                `client_id=${clientId}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `scope=${encodeURIComponent(scope)}&` +
+                `response_type=token&` +
+                `access_type=offline&` +
+                `state=${state}`;
+            
+            console.log('OAuth URL:', authUrl);
+            
+            // Open popup
+            const popup = window.open(
+                authUrl,
+                'google-oauth-test',
+                'width=500,height=600,scrollbars=yes,resizable=yes'
+            );
+            
+            if (!popup) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">Popup blocked!</p>';
+                return;
+            }
+            
+            // Listen for messages
+            const messageListener = (event) => {
+                if (event.origin !== window.location.origin) return;
+                
+                if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+                    document.getElementById('result').innerHTML = '<p style="color: green;">Success! Token: ' + event.data.token.substring(0, 20) + '...</p>';
+                    popup.close();
+                } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+                    document.getElementById('result').innerHTML = '<p style="color: red;">Error: ' + event.data.error + '</p>';
+                    popup.close();
+                }
+            };
+            
+            window.addEventListener('message', messageListener);
+            
+            // Check if popup closes
+            const checkClosed = setInterval(() => {
+                if (popup.closed) {
+                    clearInterval(checkClosed);
+                    window.removeEventListener('message', messageListener);
+                    document.getElementById('result').innerHTML = '<p style="color: orange;">Popup closed without result</p>';
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

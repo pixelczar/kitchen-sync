@@ -22,7 +22,7 @@ const container = {
 };
 
 const item = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 16},
   show: { 
     opacity: 1, 
     y: 0,
@@ -46,8 +46,6 @@ export const TodosView = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [preselectedUserId, setPreselectedUserId] = useState<string | undefined>();
-  const [forceRender, setForceRender] = useState(false);
-  
   // Listen for custom events from navigation plus button
   useEffect(() => {
     const handleOpenModal = () => {
@@ -61,29 +59,6 @@ export const TodosView = () => {
     return () => window.removeEventListener('openTodosModal', handleOpenModal);
   }, []);
   
-  // Force render after timeout to prevent infinite loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (usersLoading || tasksLoading) {
-        console.log('Force rendering after timeout');
-        setForceRender(true);
-      }
-    }, 10000); // 10 second timeout
-    
-    return () => clearTimeout(timer);
-  }, [usersLoading, tasksLoading]);
-  
-  // Debug logging
-  console.log('TodosView render:', { 
-    usersLoading, 
-    tasksLoading, 
-    users: users?.length, 
-    tasks: tasks?.length,
-    usersError,
-    tasksError,
-    forceRender
-  });
-  
   // Handle errors
   if (usersError || tasksError) {
     return (
@@ -95,7 +70,7 @@ export const TodosView = () => {
     );
   }
   
-  if ((usersLoading || tasksLoading) && !forceRender) {
+  if (usersLoading || tasksLoading) {
     return (
       <motion.main 
         className="px-6 pb-40 overflow-y-auto h-full"
@@ -215,15 +190,6 @@ export const TodosView = () => {
       initial="hidden"
       animate="show"
     >
-      {/* Header with Add Task Button */}
-      <div className="mb-6 flex justify-between items-center relative">
-        <div>
-          <h2 className="text-5xl font-extrabold tracking-tight text-charcoal mb-2">
-            Family Tasks
-          </h2>
-        </div>
-        
-      </div>
       
       <div className="flex gap-6">
         {/* Main Content */}
@@ -249,7 +215,7 @@ export const TodosView = () => {
           <motion.div className="w-80 flex-shrink-0" variants={item}>
             <div className="rounded-3xl p-6 bg-green sticky">
               <h3 className="text-3xl font-black text-cream mb-6">
-                🏠 family to-dos
+                Family to-dos
               </h3>
             
             <div className="space-y-2">

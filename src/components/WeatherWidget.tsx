@@ -46,7 +46,7 @@ export const WeatherWidget = ({ onClick }: WeatherWidgetProps) => {
           src={`/weather-icons/${weatherIcon}.svg`}
           alt={weather.description}
           className="w-full h-full"
-          style={{ filter: 'brightness(0.4)' }}
+          style={{ filter: 'brightness(0.8) saturate(2)' }}
         />
       </div>
       <div className="flex flex-col items-start">

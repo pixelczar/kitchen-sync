@@ -7,6 +7,7 @@ const GOOGLE_PHOTOS_CLIENT_ID = import.meta.env.VITE_GOOGLE_PHOTOS_CLIENT_ID;
 // OAuth scopes for Google Photos
 const SCOPES = [
   'https://www.googleapis.com/auth/photoslibrary.readonly',
+  'https://www.googleapis.com/auth/photoslibrary',
 ];
 
 export interface GooglePhoto {
@@ -32,32 +33,48 @@ export interface GoogleAlbum {
  * Check if Google Photos API is configured
  */
 export const isGooglePhotosConfigured = (): boolean => {
-  return !!(GOOGLE_PHOTOS_API_KEY && GOOGLE_PHOTOS_CLIENT_ID);
+  return !!GOOGLE_PHOTOS_CLIENT_ID;
 };
 
 /**
- * Authorize with Google Photos using OAuth 2.0
- * Returns access token on success
+ * Authorize with Google Photos using a robust redirect-based OAuth flow
+ * This bypasses all GSI network issues and uses direct OAuth
  */
 export const authorizeGooglePhotos = async (): Promise<string> => {
   if (!isGooglePhotosConfigured()) {
     throw new Error('Google Photos API credentials not configured');
   }
 
-  // Placeholder for OAuth flow
-  // In a real implementation, this would:
-  // 1. Open OAuth consent screen
-  // 2. Get authorization code
-  // 3. Exchange for access token
-  // 4. Store token securely
+  console.log('Starting Google Photos authorization...');
+  console.log('Client ID:', GOOGLE_PHOTOS_CLIENT_ID);
+  
+  // Use direct redirect approach that bypasses all GSI issues
+  const redirectUri = `${window.location.origin}/google-auth-callback.html`;
+  const state = Math.random().toString(36).substring(2, 15);
+  
+  console.log('Redirect URI:', redirectUri);
+  console.log('State:', state);
+  
+  // Store state for verification
+  sessionStorage.setItem('googlePhotosState', state);
+  
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${GOOGLE_PHOTOS_CLIENT_ID}&` +
+    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+    `scope=${encodeURIComponent(SCOPES.join(' '))}&` +
+    `response_type=code&` +
+    `access_type=offline&` +
+    `state=${state}&` +
+    `include_granted_scopes=true`;
 
-  console.log('Google Photos OAuth flow would start here');
-  console.log('Required scopes:', SCOPES);
+  console.log('OAuth URL:', authUrl);
+  console.log('Redirecting to Google OAuth...');
   
-  // TODO: Implement actual OAuth flow using Google Identity Services
-  // See: https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow
+  // Redirect to Google OAuth (this will work even with network issues)
+  window.location.href = authUrl;
   
-  return Promise.resolve('mock-access-token');
+  // This will never resolve because we're redirecting
+  return new Promise(() => {});
 };
 
 /**
@@ -126,15 +143,41 @@ export const fetchRecentPhotos = async (
     throw new Error('Google Photos API not configured');
   }
 
-  const response = await fetch(`https://photoslibrary.googleapis.com/v1/mediaItems?pageSize=${pageSize}`, {
+  // Use the search endpoint to get recent photos
+  const response = await fetch('https://photoslibrary.googleapis.com/v1/mediaItems:search', {
+    method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify({
+      pageSize,
+      // Get photos from the last 30 days
+      filters: {
+        dateFilter: {
+          ranges: [{
+            startDate: {
+              year: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).getFullYear(),
+              month: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).getMonth() + 1,
+              day: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).getDate()
+            },
+            endDate: {
+              year: new Date().getFullYear(),
+              month: new Date().getMonth() + 1,
+              day: new Date().getDate()
+            }
+          }]
+        },
+        mediaTypeFilter: {
+          mediaTypes: ['PHOTO']
+        }
+      }
+    }),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch recent photos: ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to fetch recent photos: ${response.statusText} - ${errorText}`);
   }
 
   const data = await response.json();

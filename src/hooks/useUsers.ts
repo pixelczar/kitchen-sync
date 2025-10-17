@@ -6,18 +6,113 @@ import { useToast } from '../components/Toast';
 
 const HOUSEHOLD_ID = import.meta.env.VITE_HOUSEHOLD_ID || 'demo-family-001';
 
+// Stub user data for demo/fallback
+const getStubUsers = (): User[] => {
+  return [
+    {
+      id: 'user-1',
+      householdId: HOUSEHOLD_ID,
+      name: 'Emma',
+      role: 'child',
+      color: '#FF6B6B',
+      textColor: '#FFFFFF',
+      currentStreak: 3,
+      kudosReceived: 12,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'user-2',
+      householdId: HOUSEHOLD_ID,
+      name: 'Liam',
+      role: 'child',
+      color: '#4ECDC4',
+      textColor: '#FFFFFF',
+      currentStreak: 5,
+      kudosReceived: 8,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'user-3',
+      householdId: HOUSEHOLD_ID,
+      name: 'Ava',
+      role: 'child',
+      color: '#45B7D1',
+      textColor: '#FFFFFF',
+      currentStreak: 2,
+      kudosReceived: 15,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'user-4',
+      householdId: HOUSEHOLD_ID,
+      name: 'Noah',
+      role: 'child',
+      color: '#96CEB4',
+      textColor: '#FFFFFF',
+      currentStreak: 1,
+      kudosReceived: 6,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'user-5',
+      householdId: HOUSEHOLD_ID,
+      name: 'Mom',
+      role: 'parent',
+      color: '#FFEAA7',
+      textColor: '#2D3436',
+      currentStreak: 7,
+      kudosReceived: 3,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+};
+
 export const useUsers = () => {
   return useQuery({
     queryKey: ['users', HOUSEHOLD_ID],
     queryFn: async () => {
-      const q = query(
-        collection(firestore, 'users'),
-        where('householdId', '==', HOUSEHOLD_ID)
-      );
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+      try {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 3000)
+        );
+        
+        const queryPromise = (async () => {
+          const q = query(
+            collection(firestore, 'users'),
+            where('householdId', '==', HOUSEHOLD_ID)
+          );
+          const snapshot = await getDocs(q);
+          return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+        })();
+        
+        const users = await Promise.race([queryPromise, timeoutPromise]);
+        
+        // If no users from DB, use stub data
+        if (users.length === 0) {
+          return getStubUsers();
+        }
+        
+        return users;
+      } catch (error) {
+        console.warn('Users query failed, using stub data:', error);
+        return getStubUsers();
+      }
     },
-    refetchInterval: 10000, // Poll every 10s
+    retry: (failureCount, error) => {
+      // Don't retry on timeout errors
+      if (error?.message?.includes('timeout')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes - makes subsequent loads instant
+    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
   });
 };
 

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple OAuth Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Google OAuth Configuration Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Environment Variables</h2>
+        <p>Client ID: <span id="client-id">Loading...</span></p>
+        <p>API Key: <span id="api-key">Loading...</span></p>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. OAuth URL Test</h2>
+        <p>This will test if the OAuth URL is accessible:</p>
+        <button onclick="testOAuthUrl()">Test OAuth URL</button>
+        <div id="oauth-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Direct OAuth Test</h2>
+        <p>This will open the OAuth flow in a new tab:</p>
+        <button onclick="testDirectOAuth()">Test Direct OAuth</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Google Cloud Console Checklist</h2>
+        <ul>
+            <li>✅ OAuth 2.0 Client ID created</li>
+            <li>✅ Authorized redirect URIs: <code>http://localhost:5173/google-auth-callback.html</code></li>
+            <li>✅ Authorized JavaScript origins: <code>http://localhost:5173</code></li>
+            <li>✅ Google Photos Library API enabled</li>
+            <li>✅ OAuth consent screen configured</li>
+            <li>✅ Test users added (if in testing mode)</li>
+        </ul>
+    </div>
+
+    <script>
+        // Load environment variables
+        document.getElementById('client-id').textContent = window.location.search.includes('client_id=') ? 'Found in URL' : 'Not found';
+        document.getElementById('api-key').textContent = 'Not needed for OAuth';
+        
+        function testOAuthUrl() {
+            const resultDiv = document.getElementById('oauth-result');
+            resultDiv.innerHTML = '<p>Testing OAuth URL...</p>';
+            
+            const clientId = '80037989963-ap60navboqm788cq1kbmbjbi9phfuq65.apps.googleusercontent.com';
+            const redirectUri = 'http://localhost:5173/google-auth-callback.html';
+            const scope = 'https://www.googleapis.com/auth/photoslibrary.readonly';
+            const state = 'test123';
+            
+            const oauthUrl = `https://accounts.google.com/oauth/authorize?` +
+                `client_id=${clientId}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `scope=${encodeURIComponent(scope)}&` +
+                `response_type=token&` +
+                `access_type=offline&` +
+                `state=${state}`;
+            
+            console.log('Testing OAuth URL:', oauthUrl);
+            
+            // Test with fetch to see the response
+            fetch(oauthUrl, { method: 'HEAD' })
+                .then(response => {
+                    if (response.ok) {
+                        resultDiv.innerHTML = '<div class="success"><p>✅ OAuth URL is accessible!</p></div>';
+                    } else {
+                        resultDiv.innerHTML = `<div class="error"><p>❌ OAuth URL returned ${response.status}: ${response.statusText}</p></div>`;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `<div class="error"><p>❌ Error testing OAuth URL: ${error.message}</p></div>`;
+                });
+        }
+        
+        function testDirectOAuth() {
+            const clientId = '80037989963-ap60navboqm788cq1kbmbjbi9phfuq65.apps.googleusercontent.com';
+            const redirectUri = 'http://localhost:5173/google-auth-callback.html';
+            const scope = 'https://www.googleapis.com/auth/photoslibrary.readonly';
+            const state = 'test123';
+            
+            const oauthUrl = `https://accounts.google.com/oauth/authorize?` +
+                `client_id=${clientId}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `scope=${encodeURIComponent(scope)}&` +
+                `response_type=token&` +
+                `access_type=offline&` +
+                `state=${state}`;
+            
+            console.log('Opening OAuth URL:', oauthUrl);
+            window.open(oauthUrl, '_blank');
+        }
+    </script>
+</body>
+</html>

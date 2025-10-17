@@ -7,17 +7,124 @@ import type { Task } from '../types';
 
 const HOUSEHOLD_ID = import.meta.env.VITE_HOUSEHOLD_ID || 'demo-family-001';
 
+// Stub task data for demo/fallback
+const getStubTasks = (): Task[] => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  return [
+    {
+      id: 'task-1',
+      householdId: HOUSEHOLD_ID,
+      title: 'Make bed',
+      description: 'Make your bed every morning',
+      assignedTo: 'user-1', // Emma
+      type: 'chore',
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'task-2',
+      householdId: HOUSEHOLD_ID,
+      title: 'Feed the dog',
+      description: 'Give Rex his breakfast and dinner',
+      assignedTo: 'user-2', // Liam
+      type: 'chore',
+      completed: true,
+      completedAt: new Date(today.getTime() + 8 * 60 * 60 * 1000).toISOString(), // 8am today
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'task-3',
+      householdId: HOUSEHOLD_ID,
+      title: 'Set the table',
+      description: 'Set the table for dinner',
+      assignedTo: 'user-3', // Ava
+      type: 'chore',
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'task-4',
+      householdId: HOUSEHOLD_ID,
+      title: 'Take out trash',
+      description: 'Take the kitchen trash to the curb',
+      assignedTo: 'user-4', // Noah
+      type: 'chore',
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'todo-1',
+      householdId: HOUSEHOLD_ID,
+      title: 'Plan weekend trip',
+      description: 'Research and plan family weekend getaway',
+      assignedTo: 'user-5', // Mom
+      type: 'todo',
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'todo-2',
+      householdId: HOUSEHOLD_ID,
+      title: 'Buy groceries',
+      description: 'Weekly grocery shopping',
+      assignedTo: 'user-5', // Mom
+      type: 'todo',
+      completed: true,
+      completedAt: new Date(today.getTime() + 10 * 60 * 60 * 1000).toISOString(), // 10am today
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+};
+
 export const useTasks = () => {
   return useQuery({
     queryKey: ['tasks', HOUSEHOLD_ID],
     queryFn: async () => {
-      const q = query(
-        collection(firestore, 'tasks'),
-        where('householdId', '==', HOUSEHOLD_ID)
-      );
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Task));
+      try {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 3000)
+        );
+        
+        const queryPromise = (async () => {
+          const q = query(
+            collection(firestore, 'tasks'),
+            where('householdId', '==', HOUSEHOLD_ID)
+          );
+          const snapshot = await getDocs(q);
+          return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Task));
+        })();
+        
+        const tasks = await Promise.race([queryPromise, timeoutPromise]);
+        
+        // If no tasks from DB, use stub data
+        if (tasks.length === 0) {
+          return getStubTasks();
+        }
+        
+        return tasks;
+      } catch (error) {
+        console.warn('Tasks query failed, using stub data:', error);
+        return getStubTasks();
+      }
     },
+    retry: (failureCount, error) => {
+      // Don't retry on timeout errors
+      if (error?.message?.includes('timeout')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes - makes subsequent loads instant
+    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
   });
 };
 

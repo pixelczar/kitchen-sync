@@ -10,8 +10,8 @@ import type { CalendarEvent } from '../../types';
 type CalendarView = 'week' | 'month' | 'day';
 
 export const Calendar = () => {
-  const { data: events, isLoading: eventsLoading } = useCalendarEvents();
-  const { data: users, isLoading: usersLoading } = useUsers();
+  const { data: events, isLoading: eventsLoading, error: eventsError } = useCalendarEvents();
+  const { data: users, isLoading: usersLoading, error: usersError } = useUsers();
   const { mutate: createEvent } = useCreateCalendarEvent();
   const { mutate: updateEvent } = useUpdateCalendarEvent();
   const { mutate: deleteEvent } = useDeleteCalendarEvent();
@@ -107,9 +107,6 @@ export const Calendar = () => {
     return events.filter(event => event.startTime.startsWith(dateStr));
   };
   
-  const getUserColor = (userId: string) => {
-    return users?.find(u => u.id === userId)?.color || '#0A95FF';
-  };
   
   const handleSaveEvent = (eventData: Partial<CalendarEvent>) => {
     if (editingEvent) {
@@ -121,6 +118,17 @@ export const Calendar = () => {
     setSelectedDate(undefined);
   };
 
+  // Handle errors
+  if (eventsError || usersError) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-xl font-semibold text-error">
+          Error loading data: {eventsError?.message || usersError?.message}
+        </div>
+      </div>
+    );
+  }
+  
   // Loading state with skeletons
   if (eventsLoading || usersLoading) {
     return (
@@ -241,48 +249,16 @@ export const Calendar = () => {
 
       {/* Week View (5 Days) */}
       {view === 'week' && users && (
-        <div className="bg-cream">
-          {/* Family Progress Bar */}
-          {/* <div className="mb-6 flex gap-4 justify-center">
-            {users.map(user => {
-              const stats = getUserTaskStats(user.id);
-              return (
-                <div key={user.id} className="flex items-center gap-3">
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-black"
-                    style={{ backgroundColor: user.color, color: user.textColor }}
-                  >
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="font-bold text-charcoal">
-                    {user.name}
-                  </span>
-                  <div className="relative">
-                    <div className="w-24 h-2 bg-gray-light rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          backgroundColor: user.color,
-                          width: `${stats.total > 0 ? (stats.completed / stats.total) * 100 : 0}%`
-                        }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-medium ml-2">{stats.completed}/{stats.total}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div> */}
-
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {/* Week Grid */}
-          <div className="flex gap-0 overflow-x-auto">
+          <div className="flex overflow-x-auto">
             {/* Time Labels Column */}
-            <div className="flex-shrink-0 w-20 pr-2">
-              <div className="h-16" /> {/* Spacer for day headers */}
+            <div className="flex-shrink-0 w-12 md:w-16 bg-gray-light/30">
+              <div className="h-12 md:h-16 border-b border-gray-light" /> {/* Spacer for day headers */}
               {timeSlots.map(hour => (
-                <div key={hour} className="h-20 flex items-start justify-end pr-2">
-                  <span className="text-sm font-semibold text-gray-medium">
-                    {hour === 0 ? '12 AM' : hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
+                <div key={hour} className="h-16 md:h-20 flex items-start justify-center pt-1 border-b border-gray-light/50">
+                  <span className="text-xs font-semibold text-gray-medium">
+                    {hour === 0 ? '12A' : hour === 12 ? '12P' : hour > 12 ? `${hour - 12}P` : `${hour}A`}
                   </span>
                 </div>
               ))}
@@ -294,13 +270,13 @@ export const Calendar = () => {
               const isToday = date.toDateString() === new Date().toDateString();
               
               return (
-                <div key={dayIndex} className="flex-1 min-w-[200px] border-l border-gray-light">
+                <div key={dayIndex} className="flex-1 min-w-[140px] md:min-w-[180px] border-l border-gray-light/50">
                   {/* Day Header */}
-                  <div className={`h-16 flex flex-col items-center justify-center border-b border-gray-light ${isToday ? 'bg-yellow/20' : ''}`}>
-                    <div className={`text-sm font-bold ${isToday ? 'text-charcoal' : 'text-gray-medium'}`}>
+                  <div className={`h-12 md:h-16 flex flex-col items-center justify-center border-b border-gray-light/50 ${isToday ? 'bg-yellow/30' : 'bg-gray-light/20'}`}>
+                    <div className={`text-xs font-bold ${isToday ? 'text-charcoal' : 'text-gray-medium'}`}>
                       {date.toLocaleDateString('en-US', { weekday: 'short' })}
                     </div>
-                    <div className={`text-2xl font-black ${isToday ? 'text-charcoal bg-yellow rounded-full w-10 h-10 flex items-center justify-center' : 'text-charcoal'}`}>
+                    <div className={`text-lg md:text-xl font-black ${isToday ? 'text-charcoal bg-yellow rounded-full w-6 h-6 md:w-8 md:h-8 flex items-center justify-center' : 'text-charcoal'}`}>
                       {date.getDate()}
                     </div>
                   </div>
@@ -311,8 +287,12 @@ export const Calendar = () => {
                       <div
                         key={hourIndex}
                         onClick={() => handleTimeSlotClick(date, hour)}
-                        className="h-20 border-b border-gray-light/50 hover:bg-blue/5 cursor-pointer transition-colors"
-                      />
+                        className="h-16 md:h-20 border-b border-gray-light/30 hover:bg-blue/5 cursor-pointer transition-colors group"
+                      >
+                        <div className="h-full w-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="w-1 h-1 bg-blue rounded-full" />
+                        </div>
+                      </div>
                     ))}
 
                     {/* Events Overlay */}
@@ -327,25 +307,26 @@ export const Calendar = () => {
                             setEditingEvent(event);
                             setIsModalOpen(true);
                           }}
-                          className="absolute left-1 right-1 rounded-lg p-2 cursor-pointer overflow-hidden"
+                          className="absolute left-1 right-1 rounded-lg p-1 md:p-2 cursor-pointer overflow-hidden shadow-sm"
                           style={{
                             top: `${pos.top}px`,
-                            height: `${Math.max(pos.height, 60)}px`,
+                            height: `${Math.max(pos.height, 40)}px`,
                             backgroundColor: user?.color || '#0A95FF',
-                            opacity: 0.9
+                            opacity: 0.95
                           }}
-                          whileHover={{ scale: 1.02, opacity: 1 }}
+                          whileHover={{ scale: 1.02, opacity: 1, y: -2 }}
+                          transition={{ type: "spring", stiffness: 300 }}
                         >
-                          <div className="flex items-start gap-1">
+                          <div className="flex items-start gap-1 md:gap-2">
                             <div
-                              className="w-5 h-5 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: user?.color || '#0A95FF' }}
+                              className="w-3 h-3 md:w-4 md:h-4 rounded-full flex-shrink-0 mt-0.5"
+                              style={{ backgroundColor: 'rgba(255,255,255,0.3)' }}
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="text-xs font-bold text-cream truncate">
+                              <div className="text-xs font-bold text-white truncate">
                                 {event.title}
                               </div>
-                              <div className="text-xs text-cream/90">
+                              <div className="text-xs text-white/80 hidden md:block">
                                 {formatTime(event.startTime)} - {formatTime(event.endTime)}
                               </div>
                             </div>
@@ -363,42 +344,52 @@ export const Calendar = () => {
 
       {/* Month View */}
       {view === 'month' && (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="grid grid-cols-7 gap-2 mb-4">
+        <div className="bg-white rounded-2xl shadow-lg p-3 md:p-6">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 mb-4">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center font-bold text-gray-medium text-sm">
+              <div key={day} className="text-center font-bold text-gray-medium text-xs md:text-sm py-2">
                 {day}
               </div>
             ))}
           </div>
           
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
             {days.map((day, index) => (
               <div
                 key={index}
                 onClick={() => day && handleDayClick(day)}
                 className={`
-                  aspect-square rounded-lg p-2 flex flex-col items-center justify-center
-                  transition-all
-                  ${day ? 'hover:bg-gray-light cursor-pointer hover:scale-105' : ''}
-                  ${day === today && isCurrentMonth ? 'bg-yellow font-black' : ''}
+                  aspect-square rounded-lg md:rounded-xl p-2 md:p-3 flex flex-col items-center justify-start
+                  transition-all duration-200
+                  ${day ? 'hover:bg-gray-light cursor-pointer hover:scale-105 hover:shadow-md' : ''}
+                  ${day === today && isCurrentMonth ? 'bg-yellow font-black shadow-lg' : ''}
                 `}
               >
                 {day && (
                   <>
-                    <div className="text-lg font-semibold text-charcoal mb-1">{day}</div>
+                    <div className={`text-sm md:text-lg font-semibold mb-1 md:mb-2 ${day === today && isCurrentMonth ? 'text-charcoal' : 'text-charcoal'}`}>
+                      {day}
+                    </div>
                     {hasEvents(day) && (
-                      <div className="flex gap-1 flex-wrap justify-center">
-                        {getDayEvents(day).slice(0, 3).map(event => (
-                          <div
-                            key={event.id}
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: getUserColor(event.assignedTo) }}
-                          />
-                        ))}
-                        {getDayEvents(day).length > 3 && (
-                          <div className="text-xs text-gray-medium">
-                            +{getDayEvents(day).length - 3}
+                      <div className="flex flex-col gap-1 w-full">
+                        {getDayEvents(day).slice(0, window.innerWidth < 768 ? 1 : 2).map((event) => {
+                          const user = getUserById(event.assignedTo);
+                          return (
+                            <div
+                              key={event.id}
+                              className="w-full rounded-md px-1 md:px-2 py-0.5 md:py-1 text-xs font-medium truncate"
+                              style={{ 
+                                backgroundColor: user?.color || '#0A95FF',
+                                color: user?.textColor || '#fff'
+                              }}
+                            >
+                              {event.title}
+                            </div>
+                          );
+                        })}
+                        {getDayEvents(day).length > (window.innerWidth < 768 ? 1 : 2) && (
+                          <div className="text-xs text-gray-medium font-semibold text-center">
+                            +{getDayEvents(day).length - (window.innerWidth < 768 ? 1 : 2)} more
                           </div>
                         )}
                       </div>
@@ -413,55 +404,76 @@ export const Calendar = () => {
 
       {/* Day View */}
       {view === 'day' && (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-3xl font-black text-charcoal mb-6">
-            {currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </h3>
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="p-6 border-b border-gray-light/50">
+            <h3 className="text-3xl font-black text-charcoal">
+              {currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </h3>
+          </div>
           
-          <div className="space-y-3">
-            {getEventsForDate(currentDate).map(event => {
-              const user = getUserById(event.assignedTo);
-              return (
-                <div
-                  key={event.id}
-                  className="rounded-xl p-4 flex items-center justify-between"
-                  style={{ backgroundColor: user?.color || '#0A95FF', opacity: 0.9 }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black"
-                      style={{ backgroundColor: user?.color || '#0A95FF', color: user?.textColor || '#fff' }}
-                    >
-                      {user?.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="font-bold text-cream">{event.title}</div>
-                      <div className="text-sm text-cream/90">
-                        {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingEvent(event);
-                        setIsModalOpen(true);
-                      }}
-                      className="bg-white/20 hover:bg-white/30 text-cream px-3 py-1 rounded-lg font-semibold"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteEvent(event.id)}
-                      className="bg-red/80 hover:bg-red text-cream px-3 py-1 rounded-lg font-semibold"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-            {getEventsForDate(currentDate).length === 0 && (
+          <div className="p-6">
+            {getEventsForDate(currentDate).length > 0 ? (
+              <div className="space-y-4">
+                {getEventsForDate(currentDate)
+                  .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+                  .map(event => {
+                    const user = getUserById(event.assignedTo);
+                    const startTime = new Date(event.startTime);
+                    const endTime = new Date(event.endTime);
+                    const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60); // hours
+                    
+                    return (
+                      <motion.div
+                        key={event.id}
+                        className="rounded-xl p-4 flex items-center justify-between shadow-sm"
+                        style={{ backgroundColor: user?.color || '#0A95FF', opacity: 0.95 }}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col items-center">
+                            <div className="text-sm font-bold text-white">
+                              {formatTime(event.startTime)}
+                            </div>
+                            <div className="text-xs text-white/80">
+                              {duration > 1 ? `${duration.toFixed(1)}h` : `${Math.round(duration * 60)}m`}
+                            </div>
+                          </div>
+                          <div
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                          >
+                            {user?.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-bold text-white text-lg">{event.title}</div>
+                            <div className="text-sm text-white/90">
+                              {formatTime(event.startTime)} - {formatTime(event.endTime)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingEvent(event);
+                              setIsModalOpen(true);
+                            }}
+                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteEvent(event.id)}
+                            className="bg-red/80 hover:bg-red text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+              </div>
+            ) : (
               <NoEventsEmpty
                 onAddEvent={() => {
                   setSelectedDate(new Date());

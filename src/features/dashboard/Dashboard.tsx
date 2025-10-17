@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { KudosModal } from '../../components/KudosModal';
 import { useTasks } from '../../hooks/useTasks';
@@ -8,6 +8,8 @@ import { useUIStore } from '../../stores/uiStore';
 import { PersonCardSkeleton, WidgetSkeleton } from '../../components/Skeleton';
 import { useToast } from '../../components/Toast';
 import { blastKudos } from '../../lib/emoji-blast';
+import { fetchRecentPhotos, getPhotoUrl, filterImages } from '../../lib/google-photos';
+import { getKitchenSyncPhotos } from '../../lib/google-photos-album';
 import type { Kudos } from '../../types';
 
 const container = {
@@ -33,16 +35,71 @@ const item = {
   }
 };
 
-export const Dashboard = () => {
-  const { data: users, isLoading: usersLoading } = useUsers();
-  const { data: tasks, isLoading: tasksLoading } = useTasks();
+interface DashboardProps {
+  onTriggerScreensaver: () => void;
+}
+
+export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
+  const { data: users, isLoading: usersLoading, error: usersError } = useUsers();
+  const { data: tasks, isLoading: tasksLoading, error: tasksError } = useTasks();
   const { mutate: sendKudos } = useSendKudos();
   const queueCelebration = useUIStore((state) => state.queueCelebration);
   const toast = useToast();
   const [isKudosModalOpen, setIsKudosModalOpen] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
   // For demo, use first parent user
   const currentUserId = users?.find(u => u.role === 'parent')?.id || '';
+  
+  // Load a preview photo for the photo container
+  useEffect(() => {
+    const loadPreviewPhoto = async () => {
+      const accessToken = localStorage.getItem('googlePhotosToken');
+      if (!accessToken) {
+        // Use a sample photo if no Google Photos token
+        setPhotoPreview('https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=400&fit=crop');
+        return;
+      }
+      
+      try {
+        // First try to get photos from the Kitchen Sync album
+        let photos = await getKitchenSyncPhotos(accessToken, 1);
+        
+        // If no Kitchen Sync album photos, fall back to recent photos
+        if (photos.length === 0) {
+          console.log('No Kitchen Sync album found, trying recent photos...');
+          photos = await fetchRecentPhotos(accessToken, 1);
+        }
+        
+        const imagePhotos = filterImages(photos);
+        
+        if (imagePhotos.length > 0) {
+          const photoUrl = getPhotoUrl(imagePhotos[0], 400, 400);
+          setPhotoPreview(photoUrl);
+        } else {
+          // Fallback to sample photo
+          setPhotoPreview('https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=400&fit=crop');
+        }
+      } catch (error) {
+        console.error('Failed to load preview photo:', error);
+        // Fallback to sample photo
+        setPhotoPreview('https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=400&fit=crop');
+      }
+    };
+    
+    loadPreviewPhoto();
+  }, []);
+  
+  // Handle errors
+  if (usersError || tasksError) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-xl font-semibold text-error">
+          Error loading data: {usersError?.message || tasksError?.message}
+        </div>
+      </div>
+    );
+  }
   
   if (usersLoading || tasksLoading) {
     return (
@@ -152,7 +209,7 @@ export const Dashboard = () => {
           </motion.div>
 
           {/* Stats Grid */}
-          <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" variants={container}>
+          <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" variants={container}>
         {/* Tasks Widget */}
         <motion.div className="rounded-3xl p-6 bg-blue" variants={item}>
           <h3 className="text-3xl font-black text-cream mb-4">
@@ -196,6 +253,25 @@ export const Dashboard = () => {
               day streak
             </p>
           </div>
+        </motion.div>
+
+        {/* Photo Container Widget */}
+        <motion.div 
+          className="rounded-3xl overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-200 h-48" 
+          variants={item}
+          onClick={onTriggerScreensaver}
+        >
+          {photoPreview ? (
+            <img
+              src={photoPreview}
+              alt="Family photo preview"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-light/30 flex items-center justify-center">
+              <div className="text-6xl">📸</div>
+            </div>
+          )}
         </motion.div>
       </motion.div>
 

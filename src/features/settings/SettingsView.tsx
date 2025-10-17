@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../../hooks/useUsers';
 import { isGoogleCalendarConfigured, authorizeGoogleCalendar } from '../../lib/google-calendar';
 import { authorizeGooglePhotos } from '../../lib/google-photos';
@@ -24,6 +24,19 @@ export const SettingsView = () => {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>();
   
+  // Check for existing tokens on component mount
+  useEffect(() => {
+    const photosToken = localStorage.getItem('googlePhotosToken');
+    const calendarToken = localStorage.getItem('googleCalendarToken');
+    
+    if (photosToken) {
+      setPhotosConnected(true);
+    }
+    if (calendarToken) {
+      setGoogleConnected(true);
+    }
+  }, []);
+  
   const handleConnectGoogleCalendar = async () => {
     if (!isGoogleCalendarConfigured()) {
       alert('Google Calendar API is not configured. See src/lib/google-calendar.ts for setup instructions.');
@@ -47,15 +60,34 @@ export const SettingsView = () => {
   const handleConnectGooglePhotos = async () => {
     setIsConnecting(true);
     try {
+      const token = localStorage.getItem('googlePhotosToken');
+      if (token) {
+        setPhotosConnected(true);
+        console.log('Already connected to Google Photos!');
+        setIsConnecting(false);
+        return;
+      }
+      
+      // Start OAuth flow (GSI-based)
       const result = await authorizeGooglePhotos();
       setPhotosConnected(true);
       console.log('Connected to Google Photos!', result);
     } catch (error) {
       console.error('Failed to connect:', error);
-      alert('Failed to connect to Google Photos');
+      alert(`Failed to connect to Google Photos: ${error.message}`);
     } finally {
       setIsConnecting(false);
     }
+  };
+
+  const handleDisconnectGooglePhotos = () => {
+    // Clear the token from localStorage
+    localStorage.removeItem('googlePhotosToken');
+    setPhotosConnected(false);
+    console.log('Disconnected from Google Photos');
+    
+    // Show success message
+    alert('Disconnected from Google Photos. Please refresh the page to see changes.');
   };
 
   const handleExportData = () => {
@@ -114,14 +146,14 @@ export const SettingsView = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Family Members */}
-        <div className="rounded-3xl p-6 bg-purple">
+        <div className="rounded-3xl p-6 bg-white border border-gray-light">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-black text-cream">
-              👨‍👩‍👧‍👦 family members
+            <h2 className="text-3xl font-black text-charcoal">
+              Family Members
             </h2>
             <button
               onClick={handleAddUser}
-              className="px-4 py-2 rounded-xl bg-cream text-purple font-bold hover:scale-105 transition-transform"
+              className="px-4 py-2 rounded-xl bg-purple text-cream font-bold hover:bg-purple/90 transition-colors"
             >
               + Add Member
             </button>
@@ -130,7 +162,7 @@ export const SettingsView = () => {
             {users?.map(user => (
               <div
                 key={user.id}
-                className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/10 transition-colors"
+                className="flex items-center gap-4 p-4 rounded-xl"
               >
                 <div
                   className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-black"
@@ -139,31 +171,31 @@ export const SettingsView = () => {
                   {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-cream">
+                  <h3 className="text-lg font-bold text-charcoal">
                     {user.name}
                   </h3>
-                  <p className="text-sm text-cream/70 capitalize">
+                  <p className="text-sm text-gray-medium capitalize">
                     {user.role}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right mr-4">
-                    <div className="text-sm font-bold text-cream">
+                    <div className="text-sm font-bold text-charcoal">
                       {user.currentStreak} day streak
                     </div>
-                    <div className="text-xs text-cream/70">
+                    <div className="text-xs text-gray-medium">
                       {user.kudosReceived} kudos
                     </div>
                   </div>
                   <button
                     onClick={() => handleEditUser(user)}
-                    className="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-cream text-sm font-semibold"
+                    className="px-3 py-1 rounded-lg bg-gray-light text-charcoal text-sm font-semibold hover:bg-gray-medium"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDeleteUser(user.id)}
-                    className="px-3 py-1 rounded-lg bg-red/80 hover:bg-red text-cream text-sm font-semibold"
+                    className="px-3 py-1 rounded-lg bg-red text-cream text-sm font-semibold hover:bg-red/90"
                   >
                     Remove
                   </button>
@@ -174,20 +206,20 @@ export const SettingsView = () => {
         </div>
 
         {/* Household Settings */}
-        <div className="rounded-3xl p-6 bg-green">
-          <h2 className="text-3xl font-black text-cream mb-6">
-            🏠 household
+        <div className="rounded-3xl p-6 bg-white border border-gray-light">
+          <h2 className="text-3xl font-black text-charcoal mb-6">
+            Household
           </h2>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 rounded-xl hover:bg-white/10 transition-colors">
+            <div className="flex items-center justify-between p-4 rounded-xl">
               <div>
-                <h3 className="font-bold text-cream">Screensaver Timeout</h3>
-                <p className="text-sm text-cream/70">Activate after inactivity</p>
+                <h3 className="font-bold text-charcoal">Screensaver Timeout</h3>
+                <p className="text-sm text-gray-medium">Activate after inactivity</p>
               </div>
               <select
                 value={screensaverTimeout}
                 onChange={(e) => setScreensaverTimeout(Number(e.target.value))}
-                className="px-3 py-1 rounded-lg bg-white/20 text-cream font-bold border-none focus:outline-none focus:ring-2 focus:ring-white/40"
+                className="px-3 py-1 rounded-lg bg-gray-light text-charcoal font-bold border border-gray-medium focus:outline-none focus:ring-2 focus:ring-purple/20"
               >
                 <option value={1}>1 min</option>
                 <option value={3}>3 min</option>
@@ -197,56 +229,56 @@ export const SettingsView = () => {
               </select>
             </div>
             
-            <div className="flex items-center justify-between p-4 rounded-xl hover:bg-white/10 transition-colors">
+            <div className="flex items-center justify-between p-4 rounded-xl">
               <div>
-                <h3 className="font-bold text-cream">Show Family Todos</h3>
-                <p className="text-sm text-cream/70">Shared tasks on dashboard</p>
+                <h3 className="font-bold text-charcoal">Show Family Todos</h3>
+                <p className="text-sm text-gray-medium">Shared tasks on dashboard</p>
               </div>
               <button
                 onClick={handleToggleFamilyTodos}
                 className={`w-12 h-6 rounded-full transition-colors ${
-                  showFamilyTodos ? 'bg-white' : 'bg-white/20'
+                  showFamilyTodos ? 'bg-purple' : 'bg-gray-light'
                 }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-green transition-transform ${
+                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
                     showFamilyTodos ? 'translate-x-6' : 'translate-x-0.5'
                   }`}
                 />
               </button>
             </div>
             
-            <div className="flex items-center justify-between p-4 rounded-xl hover:bg-white/10 transition-colors">
+            <div className="flex items-center justify-between p-4 rounded-xl">
               <div>
-                <h3 className="font-bold text-cream">Notifications</h3>
-                <p className="text-sm text-cream/70">Daily reminders & kudos</p>
+                <h3 className="font-bold text-charcoal">Notifications</h3>
+                <p className="text-sm text-gray-medium">Daily reminders & kudos</p>
               </div>
               <button
                 onClick={() => setNotificationsEnabled(!notificationsEnabled)}
                 className={`w-12 h-6 rounded-full transition-colors ${
-                  notificationsEnabled ? 'bg-white' : 'bg-white/20'
+                  notificationsEnabled ? 'bg-purple' : 'bg-gray-light'
                 }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-green transition-transform ${
+                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
                     notificationsEnabled ? 'translate-x-6' : 'translate-x-0.5'
                   }`}
                 />
               </button>
             </div>
             
-            <div className="flex items-center justify-between p-4 rounded-xl hover:bg-white/10 transition-colors">
+            <div className="flex items-center justify-between p-4 rounded-xl">
               <div>
-                <h3 className="font-bold text-cream">Daily Reset Time</h3>
-                <p className="text-sm text-cream/70">When tasks reset</p>
+                <h3 className="font-bold text-charcoal">Daily Reset Time</h3>
+                <p className="text-sm text-gray-medium">When tasks reset</p>
               </div>
-              <span className="font-bold text-cream">6:00 AM</span>
+              <span className="font-bold text-charcoal">6:00 AM</span>
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-xl hover:bg-white/10 transition-colors">
+            <div className="flex items-center justify-between p-4 rounded-xl">
               <div>
-                <h3 className="font-bold text-cream">Google Calendar</h3>
-                <p className="text-sm text-cream/70">
+                <h3 className="font-bold text-charcoal">Google Calendar</h3>
+                <p className="text-sm text-gray-medium">
                   {googleConnected ? 'Syncing ✓' : 'Sync events'}
                 </p>
               </div>
@@ -255,40 +287,49 @@ export const SettingsView = () => {
                 disabled={isConnecting || googleConnected}
                 className={`px-4 py-2 rounded-lg font-semibold transition-all ${
                   googleConnected
-                    ? 'bg-white/20 text-cream/50 cursor-not-allowed'
-                    : 'bg-white/30 text-cream hover:bg-white/40'
+                    ? 'bg-gray-light text-gray-medium cursor-not-allowed'
+                    : 'bg-purple text-cream hover:bg-purple/90'
                 }`}
               >
                 {isConnecting ? 'Connecting...' : googleConnected ? 'Connected' : 'Connect'}
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-xl hover:bg-white/10 transition-colors">
+            <div className="flex items-center justify-between p-4 rounded-xl">
               <div>
-                <h3 className="font-bold text-cream">Google Photos</h3>
-                <p className="text-sm text-cream/70">
+                <h3 className="font-bold text-charcoal">Google Photos</h3>
+                <p className="text-sm text-gray-medium">
                   {photosConnected ? 'Syncing ✓' : 'Screensaver photos'}
                 </p>
               </div>
-              <button
-                onClick={handleConnectGooglePhotos}
-                disabled={isConnecting || photosConnected}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                  photosConnected
-                    ? 'bg-white/20 text-cream/50 cursor-not-allowed'
-                    : 'bg-white/30 text-cream hover:bg-white/40'
-                }`}
-              >
-                {isConnecting ? 'Connecting...' : photosConnected ? 'Connected' : 'Connect'}
-              </button>
+              {photosConnected ? (
+                <button
+                  onClick={handleDisconnectGooglePhotos}
+                  className="px-4 py-2 rounded-lg font-semibold transition-all bg-red-500 text-white hover:bg-red-600"
+                >
+                  Disconnect
+                </button>
+              ) : (
+                <button
+                  onClick={handleConnectGooglePhotos}
+                  disabled={isConnecting}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    isConnecting
+                      ? 'bg-gray-light text-gray-medium cursor-not-allowed'
+                      : 'bg-purple text-cream hover:bg-purple/90'
+                  }`}
+                >
+                  {isConnecting ? 'Connecting...' : 'Connect'}
+                </button>
+              )}
             </div>
             
             <button
               onClick={handleExportData}
-              className="w-full p-4 rounded-xl bg-white/30 hover:bg-white/40 transition-colors"
+              className="w-full p-4 rounded-xl bg-gray-light hover:bg-gray-medium transition-colors"
             >
-              <h3 className="font-bold text-cream">Export Data</h3>
-              <p className="text-sm text-cream/70">Download household data</p>
+              <h3 className="font-bold text-charcoal">Export Data</h3>
+              <p className="text-sm text-gray-medium">Download household data</p>
             </button>
           </div>
         </div>

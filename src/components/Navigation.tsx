@@ -95,17 +95,16 @@ const NavItem = ({
           {isActive && showPlusButton && (
             <motion.button
               onClick={handlePlusClick}
-              className="absolute -top-4 -right-4 w-16 h-16 bg-blue/90 text-cream shadow-2xl flex items-center justify-center text-3xl font-bold rounded-2xl z-20 hover:bg-blue"
-              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+              className="absolute -top-4 -right-4 w-16 h-16 bg-blue/90 text-cream border-2 border-blue shadow-2xl flex items-center justify-center text-3xl font-bold rounded-2xl z-20 hover:bg-blue transition-all duration-200"
+              initial={{ opacity: 0, scale: 0.8, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               whileHover={{ scale: 1.05, opacity: 1 }}
               whileTap={{ scale: 0.95 }}
               transition={{ 
                 duration: 0.4, 
-                delay: 0.6,
-                ease: "easeOut",
-                opacity: { duration: 0.3, delay: 0.6 },
-                y: { duration: 0.4, delay: 0.6 }
+                delay: 0.3,
+                ease: "easeIn",
+                
               }}
             >
               +

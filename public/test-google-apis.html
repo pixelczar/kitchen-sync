@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Google APIs</title>
+</head>
+<body>
+    <h1>Google APIs Test</h1>
+    
+    <h2>Test 1: Basic Google OAuth (No Scopes)</h2>
+    <button onclick="testBasicGoogleOAuth()">Test Basic Google OAuth</button>
+    
+    <h2>Test 2: Google Drive OAuth (Different API)</h2>
+    <button onclick="testGoogleDriveOAuth()">Test Google Drive OAuth</button>
+    
+    <h2>Test 3: Check Client ID Validity</h2>
+    <button onclick="checkClientId()">Check Client ID</button>
+    
+    <div id="result"></div>
+
+    <script>
+        const clientId = '80037989963-ap60navboqm788cq1kbmbjbi9phfuq65.apps.googleusercontent.com';
+        
+        function testBasicGoogleOAuth() {
+            const authUrl = `https://accounts.google.com/oauth/authorize?` +
+                `client_id=${clientId}&` +
+                `response_type=token&` +
+                `redirect_uri=${encodeURIComponent('http://localhost:5173/')}`;
+            
+            console.log('Basic Google OAuth URL:', authUrl);
+            window.open(authUrl, 'oauth-test', 'width=500,height=600');
+        }
+        
+        function testGoogleDriveOAuth() {
+            const authUrl = `https://accounts.google.com/oauth/authorize?` +
+                `client_id=${clientId}&` +
+                `response_type=token&` +
+                `scope=${encodeURIComponent('https://www.googleapis.com/auth/drive.readonly')}&` +
+                `redirect_uri=${encodeURIComponent('http://localhost:5173/')}`;
+            
+            console.log('Google Drive OAuth URL:', authUrl);
+            window.open(authUrl, 'oauth-test', 'width=500,height=600');
+        }
+        
+        function checkClientId() {
+            // Try to fetch Google's OAuth discovery document
+            fetch(`https://accounts.google.com/.well-known/openid_configuration`)
+                .then(response => {
+                    if (response.ok) {
+                        document.getElementById('result').innerHTML = '<p style="color: green;">Google OAuth service is accessible</p>';
+                    } else {
+                        document.getElementById('result').innerHTML = '<p style="color: red;">Google OAuth service returned: ' + response.status + '</p>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('result').innerHTML = '<p style="color: red;">Error accessing Google OAuth: ' + error.message + '</p>';
+                });
+        }
+    </script>
+</body>
+</html>

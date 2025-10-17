@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchRecentPhotos, getPhotoUrl, filterImages } from '../../lib/google-photos';
+import { fetchRecentPhotos, getPhotoUrl, filterImages, authorizeGooglePhotos, isGooglePhotosConfigured } from '../../lib/google-photos';
+import { getKitchenSyncPhotos } from '../../lib/google-photos-album';
 
 // Sample photos as fallback
 const SAMPLE_PHOTOS = [
@@ -20,15 +21,41 @@ export const Screensaver = ({ onWake }: ScreensaverProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [photos, setPhotos] = useState<string[]>(SAMPLE_PHOTOS);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   // Load Google Photos if available
   const loadGooglePhotos = useCallback(async () => {
-    const accessToken = localStorage.getItem('googlePhotosToken');
-    if (!accessToken) return;
+    // Check if Google Photos is configured
+    if (!isGooglePhotosConfigured()) {
+      console.log('Google Photos not configured, using sample photos');
+      setPhotos(SAMPLE_PHOTOS);
+      return;
+    }
+
+    let accessToken = localStorage.getItem('googlePhotosToken');
+    
+    // If no token, try to get one
+    if (!accessToken) {
+      try {
+        accessToken = await authorizeGooglePhotos();
+      } catch (error) {
+        console.log('Google Photos authentication failed, using sample photos:', error);
+        setPhotos(SAMPLE_PHOTOS);
+        return;
+      }
+    }
     
     setIsLoadingPhotos(true);
     try {
-      const googlePhotos = await fetchRecentPhotos(accessToken, 30);
+      // First try to get photos from the Kitchen Sync album
+      let googlePhotos = await getKitchenSyncPhotos(accessToken, 30);
+      
+      // If no Kitchen Sync album photos, fall back to recent photos
+      if (googlePhotos.length === 0) {
+        console.log('No Kitchen Sync album found, trying recent photos...');
+        googlePhotos = await fetchRecentPhotos(accessToken, 30);
+      }
+      
       const imagePhotos = filterImages(googlePhotos);
       
       if (imagePhotos.length > 0) {
@@ -36,6 +63,10 @@ export const Screensaver = ({ onWake }: ScreensaverProps) => {
           getPhotoUrl(photo, 1920, 1080)
         );
         setPhotos(photoUrls);
+        console.log(`Loaded ${photoUrls.length} Google Photos`);
+      } else {
+        console.log('No Google Photos found, using sample photos');
+        setPhotos(SAMPLE_PHOTOS);
       }
     } catch (error) {
       console.error('Failed to load Google Photos:', error);
@@ -58,6 +89,15 @@ export const Screensaver = ({ onWake }: ScreensaverProps) => {
     
     return () => clearInterval(timer);
   }, [photos.length]);
+
+  useEffect(() => {
+    // Update time every second
+    const timeTimer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    
+    return () => clearInterval(timeTimer);
+  }, []);
   
   return (
     <div
@@ -84,10 +124,28 @@ export const Screensaver = ({ onWake }: ScreensaverProps) => {
             />
           )}
           
-          {/* Display overlay text */}
-          <div className="absolute bottom-8 right-8 text-white/70 text-sm">
-            Tap anywhere to wake
-          </div>
+          {/* Time and Date Display */}
+          <motion.div 
+            className="absolute bottom-4 right-8 text-white text-right"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 2, duration: .8 }}
+          >
+            <div className="text-5xl text-white font-medium mb-1 tracking-tighter">
+              {currentTime.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                month: 'short', 
+                day: 'numeric' 
+              })}
+            </div>
+              <div className="text-[128px] font-extrabold text-yellow tracking-tighter leading-none">
+                {currentTime.toLocaleTimeString('en-US', { 
+                  hour: 'numeric', 
+                  minute: '2-digit',
+                  hour12: false 
+                })}
+              </div>
+          </motion.div>
         </motion.div>
       </AnimatePresence>
     </div>

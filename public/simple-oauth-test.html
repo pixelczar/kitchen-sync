@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple OAuth Test</title>
+</head>
+<body>
+    <h1>Simple OAuth Test</h1>
+    
+    <h2>Test 1: Basic OAuth URL</h2>
+    <button onclick="testBasicOAuth()">Test Basic OAuth</button>
+    
+    <h2>Test 2: Minimal OAuth URL</h2>
+    <button onclick="testMinimalOAuth()">Test Minimal OAuth</button>
+    
+    <h2>Test 3: Different Redirect URI</h2>
+    <button onclick="testDifferentRedirect()">Test Different Redirect</button>
+    
+    <div id="result"></div>
+
+    <script>
+        function testBasicOAuth() {
+            const clientId = '80037989963-ap60navboqm788cq1kbmbjbi9phfuq65.apps.googleusercontent.com';
+            const redirectUri = 'http://localhost:5173/google-auth-callback.html';
+            
+            const authUrl = `https://accounts.google.com/oauth/authorize?` +
+                `client_id=${clientId}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `response_type=token`;
+            
+            console.log('Basic OAuth URL:', authUrl);
+            window.open(authUrl, 'oauth-test', 'width=500,height=600');
+        }
+        
+        function testMinimalOAuth() {
+            const clientId = '80037989963-ap60navboqm788cq1kbmbjbi9phfuq65.apps.googleusercontent.com';
+            
+            const authUrl = `https://accounts.google.com/oauth/authorize?` +
+                `client_id=${clientId}&` +
+                `response_type=token`;
+            
+            console.log('Minimal OAuth URL:', authUrl);
+            window.open(authUrl, 'oauth-test', 'width=500,height=600');
+        }
+        
+        function testDifferentRedirect() {
+            const clientId = '80037989963-ap60navboqm788cq1kbmbjbi9phfuq65.apps.googleusercontent.com';
+            const redirectUri = 'http://localhost:5173/';
+            
+            const authUrl = `https://accounts.google.com/oauth/authorize?` +
+                `client_id=${clientId}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `response_type=token`;
+            
+            console.log('Different Redirect OAuth URL:', authUrl);
+            window.open(authUrl, 'oauth-test', 'width=500,height=600');
+        }
+    </script>
+</body>
+</html>
