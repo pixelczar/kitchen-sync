@@ -35,8 +35,8 @@ const item = {
 };
 
 export const TodosView = () => {
-  const { data: users, isLoading: usersLoading, error: usersError } = useUsers();
-  const { data: tasks, isLoading: tasksLoading, error: tasksError } = useTasks();
+  const { data: users, error: usersError, status: usersStatus } = useUsers();
+  const { data: tasks, error: tasksError, status: tasksStatus } = useTasks();
   const { mutate: updateTask } = useTaskMutations();
   const { mutate: createTask } = useCreateTask();
   const { mutate: updateTaskMutation } = useUpdateTask();
@@ -46,6 +46,18 @@ export const TodosView = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [preselectedUserId, setPreselectedUserId] = useState<string | undefined>();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // Set initial load to false after component mounts and data is available
+  useEffect(() => {
+    if (isInitialLoad && users && tasks) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        setIsInitialLoad(false);
+      });
+    }
+  }, [isInitialLoad, users, tasks]);
+  
   // Listen for custom events from navigation plus button
   useEffect(() => {
     const handleOpenModal = () => {
@@ -70,7 +82,12 @@ export const TodosView = () => {
     );
   }
   
-  if (usersLoading || tasksLoading) {
+  // Show loading state if either query is still loading/pending OR if we don't have data yet
+  // Use status to be more precise about when to show loading
+  const isStillLoading = usersStatus === 'pending' || tasksStatus === 'pending';
+  const hasNoData = !users || !tasks;
+  
+  if (isStillLoading || hasNoData) {
     return (
       <motion.main 
         className="px-6 pb-40 overflow-y-auto h-full"
@@ -108,15 +125,6 @@ export const TodosView = () => {
           )}
         </div>
       </motion.main>
-    );
-  }
-  
-  // Handle case where data is undefined (shouldn't happen after loading is false)
-  if (!users || !tasks) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-xl font-semibold text-error">No data available</div>
-      </div>
     );
   }
   
@@ -195,9 +203,19 @@ export const TodosView = () => {
         {/* Main Content */}
         <div className="flex-1">
           {/* Person Cards Grid */}
-          <motion.div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" variants={container}>
+          <motion.div 
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" 
+            variants={container}
+            initial={isInitialLoad ? "show" : "hidden"}
+            animate="show"
+          >
             {userTasks.map(({ user, tasks, kudosCount }) => (
-              <motion.div key={user.id} variants={item}>
+              <motion.div 
+                key={user.id} 
+                variants={item}
+                initial={isInitialLoad ? "show" : "hidden"}
+                animate="show"
+              >
                 <PersonCard
                   user={user}
                   tasks={tasks}
@@ -212,7 +230,12 @@ export const TodosView = () => {
 
         {/* Shared Todos Sidebar */}
         {showFamilyTodos && (
-          <motion.div className="w-80 flex-shrink-0" variants={item}>
+          <motion.div 
+            className="w-80 flex-shrink-0" 
+            variants={item}
+            initial={isInitialLoad ? "show" : "hidden"}
+            animate="show"
+          >
             <div className="rounded-3xl p-6 bg-green sticky">
               <h3 className="text-3xl font-black text-cream mb-6">
                 Family to-dos
@@ -255,7 +278,12 @@ export const TodosView = () => {
       </div>
 
       {/* Footer */}
-      <motion.div className="text-center mt-12 mb-8" variants={item}>
+      <motion.div 
+        className="text-center mt-12 mb-8" 
+        variants={item}
+        initial={isInitialLoad ? "show" : "hidden"}
+        animate="show"
+      >
         <h2 className="text-4xl font-handwritten tracking-tight text-purple transform -rotate-2">
           WE'RE DOIN' IT!
         </h2>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Photos Authentication</title>
+    <title>Google Authentication</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -42,16 +42,18 @@
 <body>
     <div class="container">
         <div class="spinner"></div>
-        <h2>Connecting to Google Photos...</h2>
+        <h2 id="title">Connecting to Google...</h2>
         <p id="status">Please wait...</p>
     </div>
 
     <script>
         console.log('Callback page loaded');
         console.log('URL:', window.location.href);
+        console.log('Search params:', window.location.search);
         console.log('Hash:', window.location.hash);
         
         const statusEl = document.getElementById('status');
+        const titleEl = document.getElementById('title');
         
         // Handle the OAuth callback
         function handleAuthCallback() {
@@ -59,18 +61,26 @@
                 console.log('Processing OAuth callback...');
                 console.log('URL:', window.location.href);
                 console.log('Search params:', window.location.search);
+                console.log('Hash:', window.location.hash);
                 
                 // Get the URL search params which contains the authorization code
                 const urlParams = new URLSearchParams(window.location.search);
                 const code = urlParams.get('code');
                 const error = urlParams.get('error');
                 const state = urlParams.get('state');
-                const storedState = sessionStorage.getItem('googlePhotosState');
+                const storedState = sessionStorage.getItem('googlePhotosState') || sessionStorage.getItem('googleCalendarState');
                 
                 console.log('Authorization code:', code ? 'Present' : 'Missing');
                 console.log('Error:', error);
                 console.log('State:', state);
                 console.log('Stored state:', storedState);
+                
+                // Determine which service we're authenticating for
+                const isGooglePhotos = sessionStorage.getItem('googlePhotosState') === state;
+                const isGoogleCalendar = sessionStorage.getItem('googleCalendarState') === state;
+                const serviceName = isGooglePhotos ? 'Google Photos' : isGoogleCalendar ? 'Google Calendar' : 'Google';
+                
+                titleEl.textContent = `Connecting to ${serviceName}...`;
                 
                 if (error) {
                     console.error('OAuth error:', error);
@@ -95,7 +105,7 @@
                     statusEl.textContent = 'Exchanging authorization code for access token...';
                     
                     // Exchange authorization code for access token
-                    exchangeCodeForToken(code);
+                    exchangeCodeForToken(code, isGooglePhotos, isGoogleCalendar);
                 } else {
                     console.error('No authorization code received');
                     statusEl.textContent = 'Authentication failed: No authorization code received';
@@ -115,16 +125,31 @@
         }
         
         // Exchange authorization code for access token
-        async function exchangeCodeForToken(code) {
+        async function exchangeCodeForToken(code, isGooglePhotos, isGoogleCalendar) {
             try {
+                // Determine which client ID and secret to use
+                let clientId, clientSecret, tokenKey;
+                if (isGooglePhotos) {
+                    clientId = '80037989963-unq5ouh5o8smr8pb9j4s7uifg5foj7vf.apps.googleusercontent.com';
+                    clientSecret = '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';
+                    tokenKey = 'googlePhotosToken';
+                } else if (isGoogleCalendar) {
+                    // Use the same client ID for now, but you can create separate ones
+                    clientId = '80037989963-unq5ouh5o8smr8pb9j4s7uifg5foj7vf.apps.googleusercontent.com';
+                    clientSecret = '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';
+                    tokenKey = 'googleCalendarToken';
+                } else {
+                    throw new Error('Unknown service');
+                }
+                
                 const response = await fetch('https://oauth2.googleapis.com/token', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
                     body: new URLSearchParams({
-                        client_id: '80037989963-unq5ouh5o8smr8pb9j4s7uifg5foj7vf.apps.googleusercontent.com',
-                        client_secret: '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',
+                        client_id: clientId,
+                        client_secret: clientSecret,
                         code: code,
                         grant_type: 'authorization_code',
                         redirect_uri: window.location.origin + '/google-auth-callback.html'
@@ -140,9 +165,10 @@
                 console.log('Token exchange successful:', data);
                 
                 // Store the access token
-                localStorage.setItem('googlePhotosToken', data.access_token);
+                localStorage.setItem(tokenKey, data.access_token);
                 
-                statusEl.textContent = 'Successfully connected to Google Photos!';
+                const serviceName = isGooglePhotos ? 'Google Photos' : 'Google Calendar';
+                statusEl.textContent = `Successfully connected to ${serviceName}!`;
                 statusEl.className = 'success';
                 
                 setTimeout(() => {
@@ -158,7 +184,7 @@
                 }, 3000);
             }
         }
-
+        
         // Run the callback when the page loads
         window.addEventListener('load', handleAuthCallback);
     </script>

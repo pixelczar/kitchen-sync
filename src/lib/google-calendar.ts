@@ -9,81 +9,100 @@
  * 3. Enable Google Calendar API
  * 4. Create OAuth 2.0 credentials (Web application)
  * 5. Add authorized redirect URIs:
- *    - http://localhost:5173/auth/google/callback (dev)
- *    - https://yourdomain.com/auth/google/callback (prod)
+ *    - http://localhost:5173/google-auth-callback.html (dev)
+ *    - https://yourdomain.com/google-auth-callback.html (prod)
  * 6. Add the following to your .env.local file:
- *    VITE_GOOGLE_CLIENT_ID=your_client_id_here
- *    VITE_GOOGLE_API_KEY=your_api_key_here
+ *    VITE_GOOGLE_CALENDAR_CLIENT_ID=your_client_id_here
  * 
  * SCOPES NEEDED:
  * - https://www.googleapis.com/auth/calendar.readonly
  * - https://www.googleapis.com/auth/calendar.events
  */
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events';
-
-let tokenClient: any = null;
+const GOOGLE_CALENDAR_CLIENT_ID = import.meta.env.VITE_GOOGLE_CALENDAR_CLIENT_ID;
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar.events'
+];
 
 /**
- * Initialize Google OAuth2 client
+ * Check if Google Calendar is configured
  */
-export const initGoogleCalendar = () => {
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_API_KEY) {
-    console.warn('Google Calendar API credentials not configured. See src/lib/google-calendar.ts for setup instructions.');
-    return;
-  }
-
-  // Load Google Identity Services library
-  const script = document.createElement('script');
-  script.src = 'https://accounts.google.com/gsi/client';
-  script.async = true;
-  script.defer = true;
-  document.body.appendChild(script);
-
-  script.onload = () => {
-    // @ts-ignore
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: SCOPES,
-      callback: '', // Will be set when authorize is called
-    });
-  };
+export const isGoogleCalendarConfigured = (): boolean => {
+  return !!GOOGLE_CALENDAR_CLIENT_ID;
 };
 
 /**
- * Authorize user and get access token
+ * Authorize Google Calendar using OAuth2
  */
-export const authorizeGoogleCalendar = (): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    if (!tokenClient) {
-      reject(new Error('Google Calendar not initialized'));
-      return;
-    }
+export const authorizeGoogleCalendar = async (): Promise<string> => {
+  if (!isGoogleCalendarConfigured()) {
+    throw new Error('Google Calendar API credentials not configured');
+  }
 
-    tokenClient.callback = (response: any) => {
-      if (response.error) {
-        reject(response.error);
-      } else {
-        resolve(response.access_token);
-      }
-    };
+  console.log('Starting Google Calendar authorization...');
+  console.log('Client ID:', GOOGLE_CALENDAR_CLIENT_ID);
 
-    tokenClient.requestAccessToken();
+  // Use direct redirect approach similar to Google Photos
+  const redirectUri = `${window.location.origin}/google-auth-callback.html`;
+  const state = Math.random().toString(36).substring(2, 15);
+
+  console.log('Redirect URI:', redirectUri);
+  console.log('State:', state);
+
+  // Store state for verification
+  sessionStorage.setItem('googleCalendarState', state);
+
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${GOOGLE_CALENDAR_CLIENT_ID}&` +
+    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+    `scope=${encodeURIComponent(SCOPES.join(' '))}&` +
+    `response_type=code&` +
+    `access_type=offline&` +
+    `state=${state}&` +
+    `include_granted_scopes=true`;
+
+  console.log('OAuth URL:', authUrl);
+  console.log('Redirecting to Google OAuth...');
+
+  // Redirect to Google OAuth
+  window.location.href = authUrl;
+
+  // This will never resolve because we're redirecting
+  return new Promise(() => {});
+};
+
+/**
+ * Fetch available calendars from Google Calendar
+ */
+export const fetchGoogleCalendars = async (accessToken: string) => {
+  const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
   });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch calendars');
+  }
+
+  const data = await response.json();
+  return data.items || [];
 };
 
 /**
  * Fetch calendar events from Google Calendar
  */
-export const fetchGoogleCalendarEvents = async (accessToken: string, timeMin: Date, timeMax: Date) => {
+export const fetchGoogleCalendarEvents = async (accessToken: string, timeMin: Date, timeMax: Date, calendarId: string = 'primary') => {
+  const userTimezone = localStorage.getItem('userTimezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
   const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
     `timeMin=${timeMin.toISOString()}&` +
     `timeMax=${timeMax.toISOString()}&` +
     `singleEvents=true&` +
-    `orderBy=startTime`,
+    `orderBy=startTime&` +
+    `timeZone=${encodeURIComponent(userTimezone)}`,
     {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -92,7 +111,13 @@ export const fetchGoogleCalendarEvents = async (accessToken: string, timeMin: Da
   );
 
   if (!response.ok) {
-    throw new Error('Failed to fetch calendar events');
+    if (response.status === 401) {
+      console.error('Google Calendar API: Unauthorized - token may be expired');
+      // Clear the invalid token
+      localStorage.removeItem('googleCalendarToken');
+      throw new Error('Google Calendar authentication expired. Please reconnect.');
+    }
+    throw new Error(`Failed to fetch calendar events: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
@@ -107,38 +132,78 @@ export const syncGoogleCalendarEvents = async (
   accessToken: string,
   householdId: string,
   userId: string,
-  userColor: string
+  userColor: string,
+  calendarId: string = 'primary'
 ) => {
-  // Fetch events for the next 30 days
-  const timeMin = new Date();
-  const timeMax = new Date();
-  timeMax.setDate(timeMax.getDate() + 30);
+  try {
+    // Fetch events for the next 30 days
+    const timeMin = new Date();
+    const timeMax = new Date();
+    timeMax.setDate(timeMax.getDate() + 30);
 
-  const googleEvents = await fetchGoogleCalendarEvents(accessToken, timeMin, timeMax);
+    console.log(`Fetching Google Calendar events from calendar: ${calendarId}...`);
+    const googleEvents = await fetchGoogleCalendarEvents(accessToken, timeMin, timeMax, calendarId);
+    console.log(`Found ${googleEvents.length} Google Calendar events`);
 
-  // Convert Google Calendar events to our format
-  const events = googleEvents.map((event: any) => ({
-    householdId,
-    title: event.summary || 'Untitled Event',
-    startTime: event.start.dateTime || event.start.date,
-    endTime: event.end.dateTime || event.end.date,
-    assignedTo: userId,
-    color: userColor,
-    source: 'google' as const,
-    externalId: event.id,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }));
+    // Convert Google Calendar events to our format
+    const events = googleEvents.map((event: any) => ({
+      householdId,
+      title: event.summary || 'Untitled Event',
+      startTime: event.start.dateTime || event.start.date,
+      endTime: event.end.dateTime || event.end.date,
+      assignedTo: userId,
+      color: userColor,
+      source: 'google' as const,
+      externalId: event.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
 
-  // TODO: Save events to Firestore
-  // You would use batched writes here to update the calendar-events collection
-  console.log('Synced Google Calendar events:', events);
-
-  return events;
+    console.log('Converted Google Calendar events:', events);
+    return events;
+  } catch (error) {
+    console.error('Failed to sync Google Calendar events:', error);
+    throw error;
+  }
 };
 
-// Export placeholder for settings UI
-export const isGoogleCalendarConfigured = (): boolean => {
-  return !!(GOOGLE_CLIENT_ID && GOOGLE_API_KEY);
+/**
+ * Create a new event in Google Calendar
+ */
+export const createGoogleCalendarEvent = async (
+  accessToken: string,
+  event: {
+    title: string;
+    startTime: string;
+    endTime: string;
+    description?: string;
+  }
+) => {
+  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      summary: event.title,
+      description: event.description || '',
+      start: {
+        dateTime: event.startTime,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      end: {
+        dateTime: event.endTime,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to create Google Calendar event');
+  }
+
+  const data = await response.json();
+  return data;
 };
 

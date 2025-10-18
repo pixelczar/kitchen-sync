@@ -109,12 +109,18 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
         );
         
         const queryPromise = (async () => {
+          console.log('Querying Firestore for calendar events...');
+          console.log('Household ID:', HOUSEHOLD_ID);
+          
           const q = query(
             collection(firestore, 'calendar-events'),
             where('householdId', '==', HOUSEHOLD_ID),
             orderBy('startTime', 'asc')
           );
           const snapshot = await getDocs(q);
+          console.log('Firestore snapshot size:', snapshot.size);
+          console.log('Firestore docs:', snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })));
+          
           let events = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CalendarEvent));
           
           // Filter by date range if provided
@@ -130,15 +136,15 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
         
         const events = await Promise.race([queryPromise, timeoutPromise]);
         
-        // If no events from DB, use stub data
-        if (events.length === 0) {
-          return getStubCalendarEvents();
-        }
+        console.log('Calendar events from Firestore:', events.length, 'events');
+        console.log('Events:', events);
         
+        // Return real events from Firestore (no more stub fallback)
         return events;
       } catch (error) {
-        console.warn('Calendar events query failed, using stub data:', error);
-        return getStubCalendarEvents();
+        console.warn('Calendar events query failed:', error);
+        // Return empty array instead of stub data - let the UI handle empty state
+        return [];
       }
     },
     staleTime: 1000 * 60 * 5, // 5 minutes - makes subsequent loads instant

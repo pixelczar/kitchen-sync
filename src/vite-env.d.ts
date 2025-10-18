@@ -10,6 +10,7 @@ interface ImportMetaEnv {
   readonly VITE_HOUSEHOLD_ID: string
   readonly VITE_GOOGLE_PHOTOS_API_KEY: string
   readonly VITE_GOOGLE_PHOTOS_CLIENT_ID: string
+  readonly VITE_GOOGLE_CALENDAR_CLIENT_ID: string
   readonly VITE_OPENWEATHER_API_KEY: string
 }
 

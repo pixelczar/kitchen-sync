@@ -8,8 +8,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { PersonCardSkeleton, WidgetSkeleton } from '../../components/Skeleton';
 import { useToast } from '../../components/Toast';
 import { blastKudos } from '../../lib/emoji-blast';
-import { fetchRecentPhotos, getPhotoUrl, filterImages } from '../../lib/google-photos';
-import { getKitchenSyncPhotos } from '../../lib/google-photos-album';
+import { loadSelectedPhotos } from '../../lib/google-photos';
 import type { Kudos } from '../../types';
 
 const container = {
@@ -40,42 +39,39 @@ interface DashboardProps {
 }
 
 export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
-  const { data: users, isLoading: usersLoading, error: usersError } = useUsers();
-  const { data: tasks, isLoading: tasksLoading, error: tasksError } = useTasks();
+  const { data: users, error: usersError, status: usersStatus } = useUsers();
+  const { data: tasks, error: tasksError, status: tasksStatus } = useTasks();
   const { mutate: sendKudos } = useSendKudos();
   const queueCelebration = useUIStore((state) => state.queueCelebration);
   const toast = useToast();
   const [isKudosModalOpen, setIsKudosModalOpen] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // For demo, use first parent user
   const currentUserId = users?.find(u => u.role === 'parent')?.id || '';
   
+  // Set initial load to false after component mounts and data is available
+  useEffect(() => {
+    if (isInitialLoad && users && tasks) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        setIsInitialLoad(false);
+      });
+    }
+  }, [isInitialLoad, users, tasks]);
+  
   // Load a preview photo for the photo container
   useEffect(() => {
     const loadPreviewPhoto = async () => {
-      const accessToken = localStorage.getItem('googlePhotosToken');
-      if (!accessToken) {
-        // Use a sample photo if no Google Photos token
-        setPhotoPreview('https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=400&fit=crop');
-        return;
-      }
-      
       try {
-        // First try to get photos from the Kitchen Sync album
-        let photos = await getKitchenSyncPhotos(accessToken, 1);
+        // Try to load selected photos from the Picker API
+        const selectedPhotos = await loadSelectedPhotos();
         
-        // If no Kitchen Sync album photos, fall back to recent photos
-        if (photos.length === 0) {
-          console.log('No Kitchen Sync album found, trying recent photos...');
-          photos = await fetchRecentPhotos(accessToken, 1);
-        }
-        
-        const imagePhotos = filterImages(photos);
-        
-        if (imagePhotos.length > 0) {
-          const photoUrl = getPhotoUrl(imagePhotos[0], 400, 400);
-          setPhotoPreview(photoUrl);
+        if (selectedPhotos.length > 0) {
+          // Use the first selected photo as preview
+          setPhotoPreview(selectedPhotos[0]);
+          console.log('Using selected photo as preview');
         } else {
           // Fallback to sample photo
           setPhotoPreview('https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=400&fit=crop');
@@ -101,7 +97,12 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
     );
   }
   
-  if (usersLoading || tasksLoading) {
+  // Show loading state if either query is still loading/pending OR if we don't have data yet
+  // Use status to be more precise about when to show loading
+  const isStillLoading = usersStatus === 'pending' || tasksStatus === 'pending';
+  const hasNoData = !users || !tasks;
+  
+  if (isStillLoading || hasNoData) {
     return (
       <motion.main 
         className="px-6 pb-40 overflow-y-auto h-full"
@@ -161,14 +162,6 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
     );
   }
   
-  if (!users || !tasks) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-xl font-semibold text-error">Error loading data</div>
-      </div>
-    );
-  }
-  
   // Calculate stats
   const totalTasks = tasks.filter(t => t.type === 'chore' && !t.completed).length;
   const completedToday = tasks.filter(t => t.completed).length;
@@ -199,7 +192,12 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
         {/* Main Content */}
         <div className="flex-1">
           {/* Welcome Message */}
-          <motion.div className="mb-8" variants={item}>
+          <motion.div 
+            className="mb-8" 
+            variants={item}
+            initial={isInitialLoad ? "show" : "hidden"}
+            animate="show"
+          >
             <h2 className="text-5xl font-black tracking-tight text-charcoal mb-2">
               Good {new Date().getHours() < 16 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}! 👋
             </h2>
@@ -209,9 +207,19 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
           </motion.div>
 
           {/* Stats Grid */}
-          <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" variants={container}>
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" 
+            variants={container}
+            initial={isInitialLoad ? "show" : "hidden"}
+            animate="show"
+          >
         {/* Tasks Widget */}
-        <motion.div className="rounded-3xl p-6 bg-blue" variants={item}>
+        <motion.div 
+          className="rounded-3xl p-6 bg-blue" 
+          variants={item}
+          initial={isInitialLoad ? "show" : "hidden"}
+          animate="show"
+        >
           <h3 className="text-3xl font-black text-cream mb-4">
             Tasks
           </h3>
@@ -226,7 +234,12 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
         </motion.div>
 
         {/* Completed Widget */}
-        <motion.div className="rounded-3xl p-6 bg-green" variants={item}>
+        <motion.div 
+          className="rounded-3xl p-6 bg-green" 
+          variants={item}
+          initial={isInitialLoad ? "show" : "hidden"}
+          animate="show"
+        >
           <h3 className="text-3xl font-black text-cream mb-4">
             Done Today
           </h3>
@@ -241,7 +254,12 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
         </motion.div>
 
         {/* Streak Widget */}
-        <motion.div className="rounded-3xl p-6 bg-red" variants={item}>
+        <motion.div 
+          className="rounded-3xl p-6 bg-red" 
+          variants={item}
+          initial={isInitialLoad ? "show" : "hidden"}
+          animate="show"
+        >
           <h3 className="text-3xl font-black text-cream mb-4">
             Hot Streak
           </h3>
@@ -259,6 +277,8 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
         <motion.div 
           className="rounded-3xl overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-200 h-48" 
           variants={item}
+          initial={isInitialLoad ? "show" : "hidden"}
+          animate="show"
           onClick={onTriggerScreensaver}
         >
           {photoPreview ? (
@@ -279,7 +299,12 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
       </div>
 
         {/* Family Sidebar */}
-        <motion.div className="w-80 flex-shrink-0" variants={item}>
+        <motion.div 
+          className="w-80 flex-shrink-0" 
+          variants={item}
+          initial={isInitialLoad ? "show" : "hidden"}
+          animate="show"
+        >
           <div className="rounded-3xl p-6 bg-purple sticky">
             <h3 className="text-4xl font-black text-cream mb-6">
               Family
@@ -315,7 +340,12 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
         </motion.div>
       </div>
       {/* Footer */}
-      <motion.div className="text-center mt-12 mb-8" variants={item}>
+      <motion.div 
+        className="text-center mt-12 mb-8" 
+        variants={item}
+        initial={isInitialLoad ? "show" : "hidden"}
+        animate="show"
+      >
             <h2 className="text-4xl font-handwritten tracking-tight text-purple transform -rotate-2">
               WE'RE DOIN' IT!
             </h2>

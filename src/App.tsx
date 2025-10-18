@@ -3,8 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AnimatePresence } from 'framer-motion';
 import { queryClient } from './lib/queryClient';
-import './lib/google-photos-debug'; // Import debug utilities
-import './lib/test-google-photos-api'; // Import test utilities
 import { PageTransition } from './components/PageTransition';
 import { Navigation } from './components/Navigation';
 import { Layout } from './components/Layout';
@@ -17,6 +15,7 @@ import { SettingsView } from './features/settings/SettingsView';
 import { Screensaver } from './features/screensaver/Screensaver';
 import { useIdleDetection } from './hooks/useIdleDetection';
 import { useStreakTracking } from './hooks/useStreaks';
+import { useGoogleCalendarSync } from './hooks/useGoogleCalendarSync';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -25,6 +24,9 @@ function AnimatedRoutes() {
   
   // Track streaks automatically based on task completion
   useStreakTracking();
+  
+  // Sync Google Calendar events automatically
+  useGoogleCalendarSync();
   
   // Show screensaver when idle or manually triggered
   if (isIdle && !showScreensaver) {
