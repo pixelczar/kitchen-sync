@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { syncGoogleCalendarEvents } from '../lib/google-calendar';
 import { useUsers } from './useUsers';
-import { useCreateCalendarEvent } from './useCalendarEvents';
 import { collection, query, where, getDocs, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
 
@@ -10,7 +9,6 @@ export const useGoogleCalendarSync = () => {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const { data: users } = useUsers();
-  const createEvent = useCreateCalendarEvent();
 
   const syncGoogleCalendar = useCallback(async () => {
     const accessToken = localStorage.getItem('googleCalendarToken');

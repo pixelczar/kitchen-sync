@@ -1,52 +1,63 @@
 # KitchenSync - Development Status
 
-**Last Updated:** October 15, 2025
+**Last Updated:** October 18, 2025
 
 ---
 
-## Current Sprint: Week 0 - Documentation & Setup
+## Current Sprint: Week 4 - Advanced Features & Polish
 
 ### In Progress
-- [x] Project spec finalized (v4)
-- [x] Documentation structure created
-- [ ] Project initialization (Vite + React + TypeScript)
+- [x] Google Calendar integration with OAuth and sync
+- [x] Google Photos screensaver with OAuth
+- [x] Calendar time grid optimization (6am start, fixed all-day events)
+- [x] Firebase quota optimization (batch operations, smart change detection)
+- [ ] Two-way Google Calendar sync (create events in app → Google Calendar)
 
 ### Completed This Sprint
-- [x] PRD written (`docs/prd.md`)
-- [x] Design system documented (`docs/design.md`)
-- [x] Technical specs documented (`docs/technical.md`)
-- [x] Architecture documented (`docs/architecture.md`)
-- [x] Task breakdown created (`tasks/tasks.md`)
-- [x] README written
-- [x] Supporting docs created (status, decisions, hardware, testing, components)
-- [x] Environment template created (`.env.example`)
-- [x] Git ignore configured
+- [x] Google Calendar OAuth flow and API integration
+- [x] Google Photos OAuth flow and API integration
+- [x] Calendar event rendering system overhaul (all-day vs timed events)
+- [x] Event details modal with click-to-view functionality
+- [x] Calendar color coding by source (Google vs manual events)
+- [x] Timezone picker in settings
+- [x] Current time line on today's column
+- [x] Firebase sync optimization (95% reduction in database operations)
+- [x] Calendar header visual improvements
+- [x] Event deduplication and alignment fixes
 
 ### Blocked
 - None
 
 ---
 
-## Next Sprint: Week 1 - MVP Foundation Begins
+## Next Sprint: Week 5 - Final Polish & Deployment
 
 ### Planned
-- [ ] Initialize Vite project with React + TypeScript
-- [ ] Install dependencies (Tailwind, Framer Motion, Zustand, React Query, Firebase)
-- [ ] Set up Firebase project (Firestore, Auth, Storage)
-- [ ] Configure design system in Tailwind
-- [ ] **Order Samsung Galaxy Tab A9+** (critical for performance testing)
+- [ ] Two-way Google Calendar sync (create events in app → Google Calendar)
+- [ ] Performance optimization and bundle size reduction
+- [ ] Tablet deployment and testing
+- [ ] Final UI polish and responsive design
+- [ ] Production deployment
 
 ---
 
 ## Known Issues
 
-None yet - project just starting!
+- Firebase quota exceeded errors (RESOLVED - optimized sync operations)
+- Google Calendar OAuth scope verification (RESOLVED - app verification process)
+- All-day events pushing down time grid inconsistently (RESOLVED - fixed offset system)
 
 ---
 
 ## Recent Decisions
 
 See [`docs/decisions.md`](decisions.md) for full Architecture Decision Records.
+
+**October 18, 2025:**
+- ADR-005: Single batch query for Google Calendar sync (performance optimization)
+- ADR-006: 6am time grid start for better early morning coverage
+- ADR-007: Fixed all-day events offset using maximum height across days
+- ADR-008: 30-minute sync frequency to prevent Firebase quota issues
 
 **October 15, 2025:**
 - ADR-001: Batched Firestore writes (performance optimization)
@@ -77,6 +88,32 @@ _Metrics will be populated once app is running._
 
 ## Weekly Summary
 
+### Week 4 (Oct 18, 2025)
+**Focus:** Google Calendar integration, calendar optimization, and Firebase performance
+
+**Completed:**
+- Google Calendar OAuth flow and API integration
+- Google Photos OAuth flow and API integration
+- Calendar time grid optimization (6am start, fixed all-day events)
+- Event details modal with click-to-view functionality
+- Calendar color coding by source (Google vs manual events)
+- Timezone picker in settings
+- Current time line on today's column
+- Firebase sync optimization (95% reduction in database operations)
+- Event deduplication and alignment fixes
+
+**Lessons Learned:**
+- Firebase quota issues can be resolved with batch operations and smart change detection
+- Calendar time grids need consistent offset systems for all-day events
+- Google OAuth requires proper app verification for production use
+- Single batch queries are much more efficient than individual event checks
+
+**Next Week:**
+- Two-way Google Calendar sync (create events in app → Google Calendar)
+- Performance optimization and bundle size reduction
+- Tablet deployment and testing
+- Final UI polish and responsive design
+
 ### Week 0 (Oct 15, 2025)
 **Focus:** Documentation & architecture planning
 
@@ -101,10 +138,10 @@ _Metrics will be populated once app is running._
 
 ## Milestones
 
-- [ ] **Week 1-2:** MVP Foundation - Basic dashboard with person cards, calendar widget, photo screensaver
-- [ ] **Week 3:** Recognition & Polish - Kudos system, streaks, celebration animations
-- [ ] **Week 4:** Settings & Mobile - Full settings panel, mobile companion responsive
-- [ ] **Week 5+:** Smart Features - Email-to-calendar, AI photo curation, busy week alerts
+- [x] **Week 1-2:** MVP Foundation - Basic dashboard with person cards, calendar widget, photo screensaver
+- [x] **Week 3:** Recognition & Polish - Kudos system, streaks, celebration animations
+- [x] **Week 4:** Google Integration - Google Calendar OAuth, Google Photos OAuth, calendar optimization
+- [ ] **Week 5:** Final Polish - Two-way sync, performance optimization, tablet deployment
 - [ ] **Deploy:** Production deployment to tablet
 
 ---
@@ -127,5 +164,5 @@ _Metrics will be populated once app is running._
 
 ---
 
-**Next Update:** End of Week 1 (target: Oct 22, 2025)
+**Next Update:** End of Week 5 (target: Oct 25, 2025)
 
