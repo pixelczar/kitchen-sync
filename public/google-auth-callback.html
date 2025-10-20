@@ -63,14 +63,22 @@
                 console.log('Search params:', window.location.search);
                 console.log('Hash:', window.location.hash);
                 
-                // Get the URL search params which contains the authorization code
+                // Check for implicit flow (token in URL fragment) or authorization code flow
                 const urlParams = new URLSearchParams(window.location.search);
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                
                 const code = urlParams.get('code');
-                const error = urlParams.get('error');
-                const state = urlParams.get('state');
+                const error = urlParams.get('error') || hashParams.get('error');
+                const state = urlParams.get('state') || hashParams.get('state');
+                const accessToken = hashParams.get('access_token');
+                const tokenType = hashParams.get('token_type');
+                const expiresIn = hashParams.get('expires_in');
+                const scope = hashParams.get('scope');
+                
                 const storedState = sessionStorage.getItem('googlePhotosState') || sessionStorage.getItem('googleCalendarState');
                 
                 console.log('Authorization code:', code ? 'Present' : 'Missing');
+                console.log('Access token:', accessToken ? 'Present' : 'Missing');
                 console.log('Error:', error);
                 console.log('State:', state);
                 console.log('Stored state:', storedState);
@@ -89,7 +97,11 @@
                     setTimeout(() => {
                         window.location.href = '/';
                     }, 3000);
-                } else if (code) {
+                } else if (accessToken) {
+                    // Implicit flow - token is in URL fragment
+                    console.log('Access token received via implicit flow');
+                    statusEl.textContent = 'Processing access token...';
+                    
                     // Verify state parameter
                     if (state !== storedState) {
                         console.error('State mismatch');
@@ -101,14 +113,35 @@
                         return;
                     }
                     
+                    // Store the token directly
+                    const tokenData = {
+                        accessToken: accessToken,
+                        tokenType: tokenType || 'Bearer',
+                        expiresAt: expiresIn ? Date.now() + (parseInt(expiresIn) * 1000) : null,
+                        scope: scope
+                    };
+                    
+                    const tokenKey = isGooglePhotos ? 'googlePhotosToken' : 'googleCalendarToken';
+                    localStorage.setItem(tokenKey, JSON.stringify(tokenData));
+                    console.log('Token stored:', tokenData);
+                    
+                    statusEl.textContent = `Successfully connected to ${serviceName}!`;
+                    statusEl.className = 'success';
+                    
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                    
+                } else if (code) {
+                    // Authorization code flow
                     console.log('Authorization code received, exchanging for access token...');
                     statusEl.textContent = 'Exchanging authorization code for access token...';
                     
                     // Exchange authorization code for access token
                     exchangeCodeForToken(code, isGooglePhotos, isGoogleCalendar);
                 } else {
-                    console.error('No authorization code received');
-                    statusEl.textContent = 'Authentication failed: No authorization code received';
+                    console.error('No authorization code or access token received');
+                    statusEl.textContent = 'Authentication failed: No authorization code or access token received';
                     statusEl.className = 'error';
                     setTimeout(() => {
                         window.location.href = '/';
@@ -127,21 +160,14 @@
         // Exchange authorization code for access token
         async function exchangeCodeForToken(code, isGooglePhotos, isGoogleCalendar) {
             try {
-                // Determine which client ID and secret to use
-                let clientId, clientSecret, tokenKey;
-                if (isGooglePhotos) {
-                    clientId = '80037989963-unq5ouh5o8smr8pb9j4s7uifg5foj7vf.apps.googleusercontent.com';
-                    clientSecret = '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';
-                    tokenKey = 'googlePhotosToken';
-                } else if (isGoogleCalendar) {
-                    // Use the same client ID for now, but you can create separate ones
-                    clientId = '80037989963-unq5ouh5o8smr8pb9j4s7uifg5foj7vf.apps.googleusercontent.com';
-                    clientSecret = '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';
-                    tokenKey = 'googleCalendarToken';
-                } else {
-                    throw new Error('Unknown service');
-                }
+                // Get client ID from environment (this should be available in the build)
+                const clientId = '80037989963-unq5ouh5o8smr8pb9j4s7uifg5foj7vf.apps.googleusercontent.com';
+                const tokenKey = isGooglePhotos ? 'googlePhotosToken' : 'googleCalendarToken';
                 
+                console.log('Exchanging code for token with client ID:', clientId);
+                
+                // For web applications, we need to use a different approach
+                // Since we can't store client secret securely in frontend, we'll use a different method
                 const response = await fetch('https://oauth2.googleapis.com/token', {
                     method: 'POST',
                     headers: {
@@ -149,7 +175,6 @@
                     },
                     body: new URLSearchParams({
                         client_id: clientId,
-                        client_secret: clientSecret,
                         code: code,
                         grant_type: 'authorization_code',
                         redirect_uri: window.location.origin + '/google-auth-callback.html'
@@ -158,14 +183,38 @@
                 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    throw new Error(`Token exchange failed: ${response.statusText} - ${errorText}`);
+                    console.error('Token exchange failed:', response.status, response.statusText, errorText);
+                    
+                    // If client_secret is missing, we need to use a different approach
+                    if (errorText.includes('client_secret is missing')) {
+                        console.log('Client secret missing - this is expected for public web apps');
+                        // For now, let's try to get the token using a different method
+                        // We'll use the implicit flow instead
+                        statusEl.textContent = 'OAuth configuration issue detected. Please check Google Cloud Console settings.';
+                        statusEl.className = 'error';
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 3000);
+                        return;
+                    }
+                    
+                    throw new Error(`Token exchange failed: ${response.status} ${response.statusText} - ${errorText}`);
                 }
                 
                 const data = await response.json();
                 console.log('Token exchange successful:', data);
                 
-                // Store the access token
-                localStorage.setItem(tokenKey, data.access_token);
+                // Store the complete token data (not just access_token)
+                const tokenData = {
+                    accessToken: data.access_token,
+                    refreshToken: data.refresh_token,
+                    expiresAt: data.expires_in ? Date.now() + (data.expires_in * 1000) : null,
+                    tokenType: data.token_type,
+                    scope: data.scope
+                };
+                
+                localStorage.setItem(tokenKey, JSON.stringify(tokenData));
+                console.log('Token stored:', tokenData);
                 
                 const serviceName = isGooglePhotos ? 'Google Photos' : 'Google Calendar';
                 statusEl.textContent = `Successfully connected to ${serviceName}!`;

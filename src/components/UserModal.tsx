@@ -83,9 +83,9 @@ export const UserModal = ({ isOpen, onClose, onSave, user, mode }: UserModalProp
 
         {/* Modal */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, scale: 1, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          exit={{ opacity: 0, scale: 1, y: 20 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className="relative bg-cream rounded-3xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         >

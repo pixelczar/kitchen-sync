@@ -35,6 +35,70 @@ export const isGooglePhotosConfigured = (): boolean => {
 };
 
 /**
+ * Store OAuth token securely via Cloud Function
+ */
+export const storeGooglePhotosToken = async (tokenData: {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: number;
+}) => {
+  try {
+    const { storeOAuthTokenClient } = await import('../lib/functions');
+    await storeOAuthTokenClient({
+      provider: 'photos',
+      ...tokenData
+    });
+    console.log('Google Photos token stored securely');
+  } catch (error) {
+    console.warn('Failed to store token securely, falling back to localStorage:', error);
+    // Fallback to localStorage for development
+    localStorage.setItem('googlePhotosToken', JSON.stringify(tokenData));
+  }
+};
+
+// Cache for token results to avoid repeated calls
+const tokenCache: { [key: string]: { token: string | null; timestamp: number } } = {};
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Get OAuth token from Cloud Function or localStorage fallback
+ */
+export const getGooglePhotosToken = async (): Promise<string | null> => {
+  const cacheKey = 'photos';
+  const now = Date.now();
+  
+  // Check cache first
+  if (tokenCache[cacheKey] && (now - tokenCache[cacheKey].timestamp) < CACHE_DURATION) {
+    return tokenCache[cacheKey].token;
+  }
+  
+  // Skip OAuth functions for now to prevent 404 errors
+  // TODO: Re-enable when OAuth functions are properly deployed
+  // try {
+  //   const { getOAuthTokenClient } = await import('../lib/functions');
+  //   const token = await getOAuthTokenClient('photos');
+  //   tokenCache[cacheKey] = { token, timestamp: now };
+  //   return token;
+  // } catch (error) {
+  //   // Only log warning once per session to avoid spam
+  //   if (!tokenCache[cacheKey] || (now - tokenCache[cacheKey].timestamp) > CACHE_DURATION) {
+  //     console.warn('OAuth functions not available, using localStorage for Google Photos');
+  //   }
+  // }
+  
+  // Use localStorage directly
+  const tokenData = localStorage.getItem('googlePhotosToken');
+  let token = null;
+  if (tokenData) {
+    const parsed = JSON.parse(tokenData);
+    token = parsed.accessToken;
+  }
+  
+  tokenCache[cacheKey] = { token, timestamp: now };
+  return token;
+};
+
+/**
  * Authorize with Google Photos using OAuth 2.0
  */
 export const authorizeGooglePhotos = async (): Promise<string> => {
@@ -209,47 +273,19 @@ export const loadSelectedPhotos = async (): Promise<string[]> => {
       return [];
     }
 
-    // The Picker API base URLs require authentication and can't be used directly in img src
-    // We need to fetch them with authentication and convert to data URLs
-    const photoUrls = await Promise.all(photos.map(async (photo) => {
-      try {
-        // Try different possible baseUrl locations
-        const baseUrl = photo.baseUrl || photo.mediaFile?.baseUrl;
-        
-        if (!baseUrl) {
-          return null;
-        }
-        
-        // Create the URL with parameters
-        const url = photo.mimeType?.startsWith('video/') 
-          ? `${baseUrl}=dv` 
-          : `${baseUrl}=w1920-h1080`;
-        
-        // Fetch the image with authentication
-        const response = await fetch(url, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        });
-        
-        if (!response.ok) {
-          return null;
-        }
-        
-        // Convert to blob and then to data URL
-        const blob = await response.blob();
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        
-      } catch (error) {
-        return null;
-      }
-    }));
+    // Check if we have valid photos with baseUrls
+    if (!photos || photos.length === 0) {
+      console.log('No photos in saved data');
+      return [];
+    }
 
-    return photoUrls.filter((url): url is string => url !== null);
+    // For now, we'll use a proxy approach or return empty array
+    // The Google Photos Picker API baseUrls are not meant to be used directly
+    // in img src tags due to CORS restrictions
+    console.log('Google Photos URLs cannot be used directly due to CORS restrictions');
+    console.log('Consider using a backend proxy or alternative approach');
+    
+    return [];
 
   } catch (error) {
     console.error('Error loading selected photos:', error);

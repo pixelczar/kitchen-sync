@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { KudosModal } from '../../components/KudosModal';
+import { SingleDayCalendar } from '../../components/SingleDayCalendar';
+import { WeatherWidget } from '../../components/WeatherWidget';
 import { useTasks } from '../../hooks/useTasks';
 import { useUsers } from '../../hooks/useUsers';
 import { useSendKudos } from '../../hooks/useKudos';
 import { useUIStore } from '../../stores/uiStore';
-import { PersonCardSkeleton, WidgetSkeleton } from '../../components/Skeleton';
+import { WidgetSkeleton } from '../../components/Skeleton';
 import { useToast } from '../../components/Toast';
 import { blastKudos } from '../../lib/emoji-blast';
 import { loadSelectedPhotos } from '../../lib/google-photos';
@@ -109,53 +111,51 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        <div className="flex gap-6">
-          {/* Main Content */}
-          <div className="flex-1">
-            {/* Greeting Skeleton */}
-            <div className="mb-8">
-              <div className="h-12 w-64 bg-gray-light/50 rounded animate-pulse mb-2" />
-              <div className="h-6 w-48 bg-gray-light/30 rounded animate-pulse" />
+        {/* Greeting Skeleton */}
+        <div className="mb-8">
+          <div className="h-12 w-64 bg-gray-light/50 rounded animate-pulse mb-2" />
+        </div>
+
+        {/* Grid Layout Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+          {/* Stats Row Skeleton */}
+          <div className="lg:col-span-3">
+            <WidgetSkeleton />
+          </div>
+          <div className="lg:col-span-3">
+            <div className="rounded-3xl p-6 bg-gray-light/30">
+              <div className="h-8 w-32 bg-gray-light/50 rounded animate-pulse mb-4" />
+              <div className="space-y-3">
+                <div className="h-16 bg-gray-light/50 rounded animate-pulse" />
+                <div className="h-16 bg-gray-light/50 rounded animate-pulse" />
+              </div>
             </div>
-
-            {/* Widgets Skeleton */}
-            <motion.div 
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-              variants={container}
-              initial="hidden"
-              animate="show"
-            >
-              <motion.div variants={item}><WidgetSkeleton /></motion.div>
-              <motion.div variants={item}><WidgetSkeleton /></motion.div>
-              <motion.div variants={item}><WidgetSkeleton /></motion.div>
-            </motion.div>
-
-            {/* Person Cards Skeleton */}
-            <motion.div 
-              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-              variants={container}
-              initial="hidden"
-              animate="show"
-            >
-              <motion.div variants={item}><PersonCardSkeleton /></motion.div>
-              <motion.div variants={item}><PersonCardSkeleton /></motion.div>
-            </motion.div>
+          </div>
+          <div className="lg:col-span-3">
+            <div className="rounded-3xl p-6 bg-gray-light/30">
+              <div className="h-8 w-32 bg-gray-light/50 rounded animate-pulse mb-4" />
+              <div className="space-y-3">
+                <div className="h-12 bg-gray-light/50 rounded animate-pulse" />
+                <div className="h-12 bg-gray-light/50 rounded animate-pulse" />
+                <div className="h-12 bg-gray-light/50 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+          <div className="lg:col-span-3 lg:row-span-2">
+            <div className="rounded-3xl p-6 bg-gray-light/30 h-full">
+              <div className="h-8 w-32 bg-gray-light/50 rounded animate-pulse mb-4" />
+              <div className="space-y-3">
+                <div className="h-16 bg-gray-light/50 rounded animate-pulse" />
+                <div className="h-16 bg-gray-light/50 rounded animate-pulse" />
+                <div className="h-16 bg-gray-light/50 rounded animate-pulse" />
+                <div className="h-16 bg-gray-light/50 rounded animate-pulse" />
+              </div>
+            </div>
           </div>
 
-          {/* Family Sidebar Skeleton */}
-          <div className="w-80 sticky top-6 h-fit">
-            <div className="rounded-3xl p-6 bg-gray-light/30">
-              <div className="h-8 w-32 bg-gray-light/50 rounded animate-pulse mb-6" />
-              <motion.div 
-                className="space-y-4"
-                variants={container}
-                initial="hidden"
-                animate="show"
-              >
-                <motion.div variants={item}><PersonCardSkeleton /></motion.div>
-                <motion.div variants={item}><PersonCardSkeleton /></motion.div>
-              </motion.div>
-            </div>
+          {/* Photo Row Skeleton */}
+          <div className="lg:col-span-9">
+            <div className="rounded-3xl h-80 bg-gray-light/30 animate-pulse" />
           </div>
         </div>
       </motion.main>
@@ -163,9 +163,7 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
   }
   
   // Calculate stats
-  const totalTasks = tasks.filter(t => t.type === 'chore' && !t.completed).length;
   const completedToday = tasks.filter(t => t.completed).length;
-  const activeStreak = Math.max(...users.map(u => u.currentStreak));
   
   const handleSendKudos = (kudosData: Omit<Kudos, 'id' | 'householdId' | 'timestamp'>) => {
     sendKudos(kudosData, {
@@ -188,54 +186,28 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
       initial="hidden"
       animate="show"
     >
-      <div className="flex gap-6">
-        {/* Main Content */}
-        <div className="flex-1">
-          {/* Welcome Message */}
-          <motion.div 
-            className="mb-8" 
-            variants={item}
-            initial={isInitialLoad ? "show" : "hidden"}
-            animate="show"
-          >
-            <h2 className="text-5xl font-black tracking-tight text-charcoal mb-2">
-              Good {new Date().getHours() < 16 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}! 👋
-            </h2>
-            {/* <p className="text-xl text-gray-medium">
-              Here's what's happening today
-            </p> */}
-          </motion.div>
+      {/* Welcome Message */}
+      <motion.div 
+        className="mb-8" 
+        variants={item}
+        initial={isInitialLoad ? "show" : "hidden"}
+        animate="show"
+      >
+        <h2 className="text-5xl font-black tracking-tight text-charcoal mb-2">
+          Good {new Date().getHours() < 16 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}! 👋
+        </h2>
+      </motion.div>
 
-          {/* Stats Grid */}
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" 
-            variants={container}
-            initial={isInitialLoad ? "show" : "hidden"}
-            animate="show"
-          >
-        {/* Tasks Widget */}
+      {/* Grid Layout */}
+      <motion.div 
+        className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8"
+        variants={container}
+        initial={isInitialLoad ? "show" : "hidden"}
+        animate="show"
+      >
+        {/* Stats Row - Top Row */}
         <motion.div 
-          className="rounded-3xl p-6 bg-blue" 
-          variants={item}
-          initial={isInitialLoad ? "show" : "hidden"}
-          animate="show"
-        >
-          <h3 className="text-3xl font-black text-cream mb-4">
-            Tasks
-          </h3>
-          <div className="text-center">
-            <div className="text-6xl font-black tracking-tight text-cream mb-2">
-              {totalTasks}
-            </div>
-            <p className="text-cream/80 font-semibold">
-              tasks to complete
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Completed Widget */}
-        <motion.div 
-          className="rounded-3xl p-6 bg-green" 
+          className="lg:col-span-3 rounded-3xl p-6 bg-green" 
           variants={item}
           initial={isInitialLoad ? "show" : "hidden"}
           animate="show"
@@ -253,29 +225,67 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
           </div>
         </motion.div>
 
-        {/* Streak Widget */}
+        {/* Weather Widget - Top Row */}
         <motion.div 
-          className="rounded-3xl p-6 bg-red" 
+          className="lg:col-span-3" 
+          variants={item}
+          initial={isInitialLoad ? "show" : "hidden"}
+          animate="show"
+        >
+          <WeatherWidget />
+        </motion.div>
+
+        {/* Family Widget - Top Row */}
+        <motion.div 
+          className="lg:col-span-3 rounded-3xl p-6 bg-purple" 
           variants={item}
           initial={isInitialLoad ? "show" : "hidden"}
           animate="show"
         >
           <h3 className="text-3xl font-black text-cream mb-4">
-            Hot Streak
+            Family
           </h3>
-          <div className="text-center">
-            <div className="text-6xl font-black tracking-tight text-cream mb-2">
-              {activeStreak}
-            </div>
-            <p className="text-cream/80 font-semibold">
-              day streak
-            </p>
+          <div className="space-y-3">
+            {users.slice(0, 4).map(user => (
+              <div
+                key={user.id}
+                className="flex items-center gap-3"
+              >
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-black flex-shrink-0"
+                  style={{ backgroundColor: user.color, color: user.textColor }}
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-bold text-cream truncate">
+                    {user.name}
+                  </h4>
+                  <div className="text-xs text-cream/80">
+                    {user.currentStreak >= 3 && (
+                      <span>🔥 {user.currentStreak} days</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </motion.div>
 
-        {/* Photo Container Widget */}
+
+        {/* Single Day Calendar Widget - Extends to top row */}
         <motion.div 
-          className="rounded-3xl overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-200 h-48" 
+          className="lg:col-span-3 lg:row-span-2" 
+          variants={item}
+          initial={isInitialLoad ? "show" : "hidden"}
+          animate="show"
+        >
+          <SingleDayCalendar date={new Date()} />
+        </motion.div>
+
+        {/* Large Photo - Second Row Left */}
+        <motion.div 
+          className="lg:col-span-9 rounded-3xl overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-200 h-80" 
           variants={item}
           initial={isInitialLoad ? "show" : "hidden"}
           animate="show"
@@ -289,67 +299,24 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
             />
           ) : (
             <div className="w-full h-full bg-gray-light/30 flex items-center justify-center">
-              <div className="text-6xl">📸</div>
+              <div className="text-8xl">📸</div>
             </div>
           )}
         </motion.div>
-      </motion.div>
 
-          
-      </div>
-
-        {/* Family Sidebar */}
+        {/* Motivational Message - Bottom Row */}
         <motion.div 
-          className="w-80 flex-shrink-0" 
+          className="lg:col-span-12 text-center py-8" 
           variants={item}
           initial={isInitialLoad ? "show" : "hidden"}
           animate="show"
         >
-          <div className="rounded-3xl p-6 bg-purple sticky">
-            <h3 className="text-4xl font-black text-cream mb-6">
-              Family
-            </h3>
-            <div className="space-y-4">
-              {users.map(user => (
-                <div
-                  key={user.id}
-                  className="p-4 rounded-xl hover:bg-white/10 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black flex-shrink-0"
-                      style={{ backgroundColor: user.color, color: user.textColor }}
-                    >
-                      {user.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-lg font-bold text-cream mb-1">
-                        {user.name}
-                      </h4>
-                      <div className="text-sm text-cream/80">
-                        {user.currentStreak >= 3 && (
-                          <span>🔥 {user.currentStreak} days</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <h2 className="text-4xl font-handwritten tracking-tight text-purple transform -rotate-2">
+            WE'RE DOIN' IT!
+          </h2>
         </motion.div>
-      </div>
-      {/* Footer */}
-      <motion.div 
-        className="text-center mt-12 mb-8" 
-        variants={item}
-        initial={isInitialLoad ? "show" : "hidden"}
-        animate="show"
-      >
-            <h2 className="text-4xl font-handwritten tracking-tight text-purple transform -rotate-2">
-              WE'RE DOIN' IT!
-            </h2>
-          </motion.div>
+      </motion.div>
+
       {/* Kudos FAB */}
       <motion.button
         onClick={() => setIsKudosModalOpen(true)}

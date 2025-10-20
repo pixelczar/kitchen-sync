@@ -5,9 +5,17 @@ export const useWeather = () => {
   return useQuery({
     queryKey: ['weather'],
     queryFn: async () => {
-      const location = await getUserLocation();
-      const weather = await fetchCurrentWeather(location.lat, location.lon);
-      return { weather, location };
+      console.log('🌤️ Fetching weather data...');
+      try {
+        const location = await getUserLocation();
+        console.log('🌤️ Location obtained:', location);
+        const weather = await fetchCurrentWeather(location.lat, location.lon);
+        console.log('🌤️ Weather data fetched:', weather);
+        return { weather, location };
+      } catch (error) {
+        console.error('🌤️ Weather fetch error:', error);
+        throw error;
+      }
     },
     staleTime: 600000, // 10 minutes
     retry: 2,

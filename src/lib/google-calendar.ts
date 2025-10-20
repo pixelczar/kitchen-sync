@@ -57,10 +57,10 @@ export const authorizeGoogleCalendar = async (): Promise<string> => {
     `client_id=${GOOGLE_CALENDAR_CLIENT_ID}&` +
     `redirect_uri=${encodeURIComponent(redirectUri)}&` +
     `scope=${encodeURIComponent(SCOPES.join(' '))}&` +
-    `response_type=code&` +
-    `access_type=offline&` +
+    `response_type=token&` +
     `state=${state}&` +
-    `include_granted_scopes=true`;
+    `include_granted_scopes=true&` +
+    `prompt=consent`;
 
   console.log('OAuth URL:', authUrl);
   console.log('Redirecting to Google OAuth...');
@@ -70,6 +70,88 @@ export const authorizeGoogleCalendar = async (): Promise<string> => {
 
   // This will never resolve because we're redirecting
   return new Promise(() => {});
+};
+
+/**
+ * Store OAuth token securely via Cloud Function
+ */
+export const storeGoogleCalendarToken = async (tokenData: {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: number;
+}) => {
+  try {
+    const { storeOAuthTokenClient } = await import('../lib/functions');
+    await storeOAuthTokenClient({
+      provider: 'calendar',
+      ...tokenData
+    });
+    console.log('Google Calendar token stored securely');
+  } catch (error) {
+    console.warn('Failed to store token securely, falling back to localStorage:', error);
+    // Fallback to localStorage for development
+    localStorage.setItem('googleCalendarToken', JSON.stringify(tokenData));
+  }
+};
+
+/**
+ * Get OAuth token from Cloud Function or localStorage fallback
+ */
+// Cache for token results to avoid repeated calls
+const tokenCache: { [key: string]: { token: string | null; timestamp: number } } = {};
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+export const getGoogleCalendarToken = async (): Promise<string | null> => {
+  const cacheKey = 'calendar';
+  const now = Date.now();
+  
+  // Check cache first
+  if (tokenCache[cacheKey] && (now - tokenCache[cacheKey].timestamp) < CACHE_DURATION) {
+    return tokenCache[cacheKey].token;
+  }
+  
+  // Skip OAuth functions for now to prevent 404 errors
+  // TODO: Re-enable when OAuth functions are properly deployed
+  // try {
+  //   const { getOAuthTokenClient } = await import('../lib/functions');
+  //   const token = await getOAuthTokenClient('calendar');
+  //   tokenCache[cacheKey] = { token, timestamp: now };
+  //   return token;
+  // } catch (error) {
+  //   // Only log warning once per session to avoid spam
+  //   if (!tokenCache[cacheKey] || (now - tokenCache[cacheKey].timestamp) > CACHE_DURATION) {
+  //     console.warn('OAuth functions not available, using localStorage for Google Calendar');
+  //   }
+  // }
+  
+  // Use localStorage directly
+  const tokenData = localStorage.getItem('googleCalendarToken');
+  let token = null;
+  if (tokenData) {
+    try {
+      const parsed = JSON.parse(tokenData);
+      // Handle both old format (just string) and new format (object with accessToken)
+      if (typeof parsed === 'string') {
+        token = parsed;
+      } else if (parsed && parsed.accessToken) {
+        // Check if token is expired
+        if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+          console.log('Google Calendar token expired, clearing...');
+          localStorage.removeItem('googleCalendarToken');
+          token = null;
+        } else {
+          token = parsed.accessToken;
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing Google Calendar token:', error);
+      // If parsing fails, try to use the raw value as a token
+      token = tokenData;
+    }
+  }
+  
+  tokenCache[cacheKey] = { token, timestamp: now };
+  return token;
 };
 
 /**
@@ -96,6 +178,14 @@ export const fetchGoogleCalendars = async (accessToken: string) => {
 export const fetchGoogleCalendarEvents = async (accessToken: string, timeMin: Date, timeMax: Date, calendarId: string = 'primary') => {
   const userTimezone = localStorage.getItem('userTimezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
   
+  console.log('Fetching Google Calendar events with:', {
+    calendarId,
+    timeMin: timeMin.toISOString(),
+    timeMax: timeMax.toISOString(),
+    userTimezone,
+    accessTokenLength: accessToken.length
+  });
+  
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
     `timeMin=${timeMin.toISOString()}&` +
@@ -121,6 +211,13 @@ export const fetchGoogleCalendarEvents = async (accessToken: string, timeMin: Da
   }
 
   const data = await response.json();
+  console.log('Google Calendar API response:', {
+    status: response.status,
+    hasItems: !!data.items,
+    itemsLength: data.items?.length || 0,
+    dataKeys: Object.keys(data),
+    firstItem: data.items?.[0] || null
+  });
   return data.items || [];
 };
 

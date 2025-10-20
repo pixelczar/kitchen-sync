@@ -35,19 +35,24 @@ export interface ForecastDay {
 export const getUserLocation = (): Promise<{ lat: number; lon: number }> => {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      reject(new Error('Geolocation is not supported by your browser'));
+      console.log('🌤️ Geolocation not supported, using fallback location');
+      // Fallback to New York City
+      resolve({ lat: 40.7128, lon: -74.0060 });
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log('🌤️ Geolocation successful:', position.coords);
         resolve({
           lat: position.coords.latitude,
           lon: position.coords.longitude,
         });
       },
       (error) => {
-        reject(new Error(`Geolocation error: ${error.message}`));
+        console.warn('🌤️ Geolocation failed, using fallback location:', error.message);
+        // Fallback to New York City
+        resolve({ lat: 40.7128, lon: -74.0060 });
       }
     );
   });

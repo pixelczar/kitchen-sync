@@ -1,17 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query as firestoreQuery, where, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
 import { User } from '../types';
 import { useToast } from '../components/Toast';
+import { useCurrentHousehold } from './useCurrentHousehold';
 
-const HOUSEHOLD_ID = import.meta.env.VITE_HOUSEHOLD_ID || 'demo-family-001';
+const DEMO_HOUSEHOLD_ID = 'demo-family-001';
 
 // Stub user data for demo/fallback
-const getStubUsers = (): User[] => {
+const getStubUsers = (householdId: string): User[] => {
   return [
     {
       id: 'user-1',
-      householdId: HOUSEHOLD_ID,
+      householdId: householdId,
       name: 'Emma',
       role: 'child',
       color: '#FF6B6B',
@@ -24,7 +25,7 @@ const getStubUsers = (): User[] => {
     },
     {
       id: 'user-2',
-      householdId: HOUSEHOLD_ID,
+      householdId: householdId,
       name: 'Liam',
       role: 'child',
       color: '#4ECDC4',
@@ -37,7 +38,7 @@ const getStubUsers = (): User[] => {
     },
     {
       id: 'user-3',
-      householdId: HOUSEHOLD_ID,
+      householdId: householdId,
       name: 'Ava',
       role: 'child',
       color: '#45B7D1',
@@ -50,7 +51,7 @@ const getStubUsers = (): User[] => {
     },
     {
       id: 'user-4',
-      householdId: HOUSEHOLD_ID,
+      householdId: householdId,
       name: 'Noah',
       role: 'child',
       color: '#96CEB4',
@@ -63,14 +64,14 @@ const getStubUsers = (): User[] => {
     },
     {
       id: 'user-5',
-      householdId: HOUSEHOLD_ID,
+      householdId: householdId,
       name: 'Mom',
       role: 'parent',
-      color: '#FFEAA7',
-      textColor: '#2D3436',
-      currentStreak: 7,
-      longestStreak: 12,
-      kudosReceived: 3,
+      color: '#F7EA31',
+      textColor: '#000000',
+      currentStreak: 0,
+      longestStreak: 0,
+      kudosReceived: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -78,58 +79,73 @@ const getStubUsers = (): User[] => {
 };
 
 export const useUsers = () => {
-  return useQuery({
-    queryKey: ['users', HOUSEHOLD_ID],
+  const { currentHouseholdId } = useCurrentHousehold();
+  const queryClient = useQueryClient();
+  
+  const query = useQuery<User[], Error>({
+    queryKey: ['users', currentHouseholdId],
     queryFn: async () => {
-      try {
-        // Add timeout to prevent hanging
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Query timeout')), 3000)
-        );
-        
-        const queryPromise = (async () => {
-          const q = query(
-            collection(firestore, 'users'),
-            where('householdId', '==', HOUSEHOLD_ID)
-          );
-          const snapshot = await getDocs(q);
-          return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-        })();
-        
-        const users = await Promise.race([queryPromise, timeoutPromise]);
-        
-        // If no users from DB, use stub data
-        if (users.length === 0) {
-          return getStubUsers();
-        }
-        
-        return users;
-      } catch (error) {
-        console.warn('Users query failed, using stub data:', error);
-        return getStubUsers();
+      console.log('🔥 useUsers queryFn called for household:', currentHouseholdId);
+      
+      if (!currentHouseholdId) {
+        console.log('❌ No household ID, returning empty array');
+        return [];
       }
+      
+      // Demo mode - return demo data immediately
+      if (currentHouseholdId === DEMO_HOUSEHOLD_ID) {
+        console.log('🎭 Demo mode, returning stub data');
+        return getStubUsers(currentHouseholdId);
+      }
+      
+      
+      // Query for the specific household
+      console.log('🗄️ Querying database for household:', currentHouseholdId);
+      const q = firestoreQuery(
+        collection(firestore, 'users'),
+        where('householdId', '==', currentHouseholdId)
+      );
+      const snapshot = await getDocs(q);
+      const users = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
+      console.log('📊 Database returned users for', currentHouseholdId, ':', users.length, users.map(u => u.name));
+      return users;
     },
+    enabled: !!currentHouseholdId,
+    staleTime: 5 * 60 * 1000, // 5 minutes - reasonable for user data
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache
+    refetchOnMount: false, // Use cache if available
+    refetchOnWindowFocus: false, // Don't refetch on focus
     retry: (failureCount, error) => {
-      // Don't retry on timeout errors
-      if (error?.message?.includes('timeout')) {
+      // Don't retry on permission errors
+      if (error instanceof Error && error.message.includes('permissions')) {
         return false;
       }
       return failureCount < 2;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes - makes subsequent loads instant
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
   });
+  
+  return {
+    ...query,
+    refetch: () => {
+      return queryClient.refetchQueries({ queryKey: ['users', currentHouseholdId] });
+    }
+  };
 };
 
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { currentHouseholdId } = useCurrentHousehold();
 
   return useMutation({
     mutationFn: async (userData: Omit<User, 'id' | 'householdId' | 'createdAt' | 'updatedAt'>) => {
+      if (!currentHouseholdId) {
+        throw new Error('No household selected');
+      }
+      
       const newUser = {
         ...userData,
-        householdId: HOUSEHOLD_ID,
+        householdId: currentHouseholdId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -138,8 +154,11 @@ export const useCreateUser = () => {
       return { id: docRef.id, ...newUser };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      console.log('User created successfully, triggering refetch');
       toast.success('Family member added!', '👥');
+      // Invalidate all user-related queries
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['householdUserCounts'] });
     },
     onError: (error) => {
       console.error('User creation failed:', error);
@@ -161,8 +180,11 @@ export const useUpdateUser = () => {
       });
     },
     onSuccess: () => {
+      console.log('User updated successfully, triggering refetch');
+      toast.success('Family member updated!', '✏️');
+      // Invalidate all user-related queries
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Family member updated!', '✨');
+      queryClient.invalidateQueries({ queryKey: ['householdUserCounts'] });
     },
     onError: (error) => {
       console.error('User update failed:', error);
@@ -181,8 +203,11 @@ export const useDeleteUser = () => {
       await deleteDoc(userRef);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      console.log('User deleted successfully, triggering refetch');
       toast.success('Family member removed', '👋');
+      // Invalidate all user-related queries
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['householdUserCounts'] });
     },
     onError: (error) => {
       console.error('User deletion failed:', error);

@@ -38,6 +38,7 @@ export const Screensaver = ({ onWake }: ScreensaverProps) => {
       }
     } catch (error) {
       console.error('Failed to load selected photos:', error);
+      console.log('Falling back to sample photos due to CORS restrictions');
       // Fall back to sample photos
       setPhotos(SAMPLE_PHOTOS);
     } finally {

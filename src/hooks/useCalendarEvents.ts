@@ -1,16 +1,41 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
+import { useCurrentHousehold } from './useCurrentHousehold';
+import { generateDemoCalendarEvents } from '../lib/demo-calendar-data';
 import type { CalendarEvent } from '../types';
-
-const HOUSEHOLD_ID = import.meta.env.VITE_HOUSEHOLD_ID || 'demo-family-001';
 
 
 export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
+  const { currentHouseholdId } = useCurrentHousehold();
+  
   return useQuery({
-    queryKey: ['calendar-events', HOUSEHOLD_ID, startDate?.toISOString(), endDate?.toISOString()],
+    queryKey: ['calendar-events', currentHouseholdId, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       try {
+        if (!currentHouseholdId) {
+          console.log('No current household ID, returning empty array');
+          return [];
+        }
+
+        // Return demo data for Demo family
+        if (currentHouseholdId === 'demo-family-001') {
+          console.log('Using demo calendar data for Demo family');
+          const demoEvents = generateDemoCalendarEvents();
+          
+          // Filter by date range if provided
+          let filteredEvents = demoEvents;
+          if (startDate && endDate) {
+            filteredEvents = demoEvents.filter(event => {
+              const eventStart = new Date(event.startTime);
+              return eventStart >= startDate && eventStart <= endDate;
+            });
+          }
+          
+          console.log('Demo calendar events:', filteredEvents.length, filteredEvents.map(e => e.title));
+          return filteredEvents;
+        }
+
         // Set a timeout to prevent hanging
         const timeoutPromise = new Promise<CalendarEvent[]>((_, reject) => 
           setTimeout(() => reject(new Error('Query timeout')), 3000)
@@ -18,11 +43,11 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
         
         const queryPromise = (async () => {
           console.log('Querying Firestore for calendar events...');
-          console.log('Household ID:', HOUSEHOLD_ID);
+          console.log('Household ID:', currentHouseholdId);
           
           const q = query(
             collection(firestore, 'calendar-events'),
-            where('householdId', '==', HOUSEHOLD_ID),
+            where('householdId', '==', currentHouseholdId),
             orderBy('startTime', 'asc')
           );
           const snapshot = await getDocs(q);
@@ -55,8 +80,9 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
         return [];
       }
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes - makes subsequent loads instant
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
+    enabled: !!currentHouseholdId,
+    staleTime: 1000 * 60 * 10, // 10 minutes - calendar events change less frequently
+    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
   });
 };
 

@@ -1,0 +1,368 @@
+/**
+ * Custom styles for react-big-calendar to match Kitchen Sync design system
+ */
+
+/* Import base react-big-calendar styles */
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+/* Override react-big-calendar styles to match our design system */
+.rbc-calendar {
+  font-family: inherit;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Header styles */
+.rbc-header {
+  background: #f8f9fa;
+  color: #2c3e50;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 16px 8px;
+  border-bottom: 2px solid #e9ecef;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Today header highlight */
+.rbc-header.rbc-today {
+  background: #fff3cd;
+  color: #856404;
+  font-weight: 800;
+}
+
+/* Date cell styles */
+.rbc-date-cell {
+  padding: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.rbc-date-cell.rbc-today {
+  background: #fff3cd;
+  color: #856404;
+  font-weight: 800;
+  border-radius: 8px;
+}
+
+/* Event styles */
+.rbc-event {
+  background: #0A95FF;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* All-day events */
+.rbc-event.rbc-allday-event {
+  background: #0A95FF;
+  border-radius: 4px;
+  margin: 1px 0;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rbc-allday-cell {
+  border-bottom: 1px solid #e9ecef;
+  min-height: 40px;
+}
+
+/* Custom all-day events styling */
+.custom-allday-event {
+  background: #0A95FF;
+  border-radius: 3px;
+  margin: 1px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.custom-allday-event:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Custom week view scrolling */
+.custom-week-view {
+  height: 800px;
+  overflow-y: auto;
+}
+
+.custom-week-view::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-week-view::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-week-view::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.custom-week-view::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.rbc-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.rbc-event.rbc-selected {
+  background: #0056b3;
+  box-shadow: 0 0 0 2px #007bff;
+}
+
+/* Event content */
+.rbc-event-content {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Time grid styles */
+.rbc-time-view {
+  border: none;
+}
+
+.rbc-time-header {
+  border-bottom: 2px solid #e9ecef;
+}
+
+.rbc-time-header-content {
+  border-left: 1px solid #e9ecef;
+}
+
+.rbc-time-content {
+  border-top: 1px solid #e9ecef;
+}
+
+/* Time labels */
+.rbc-time-gutter {
+  background: #f8f9fa;
+  border-right: 2px solid #e9ecef;
+}
+
+.rbc-time-gutter .rbc-timeslot-group {
+  border-bottom: 1px solid #e9ecef;
+}
+
+.rbc-label {
+  color: #6c757d;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Current time line */
+.rbc-current-time-indicator {
+  background: #dc3545;
+  height: 2px;
+  z-index: 10;
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.rbc-current-time-indicator::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  background: #dc3545;
+  border-radius: 50%;
+}
+
+.rbc-current-time-indicator::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  background: #dc3545;
+  border-radius: 50%;
+}
+
+/* Slot styles */
+.rbc-time-slot {
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.rbc-time-slot:hover {
+  background: rgba(10, 149, 255, 0.05);
+}
+
+/* Selected slot */
+.rbc-slot-selection {
+  background: rgba(10, 149, 255, 0.1);
+  border: 2px dashed #0A95FF;
+}
+
+/* Month view styles */
+.rbc-month-view {
+  border: none;
+}
+
+.rbc-month-row {
+  border-bottom: 1px solid #e9ecef;
+}
+
+.rbc-date-cell {
+  padding: 12px 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.rbc-off-range-bg {
+  background: #f8f9fa;
+}
+
+.rbc-off-range {
+  color: #adb5bd;
+}
+
+/* Week view styles */
+.rbc-week-view {
+  border: none;
+}
+
+.rbc-day-bg {
+  border-right: 1px solid #e9ecef;
+}
+
+.rbc-day-bg.rbc-today {
+  background: rgba(255, 243, 205, 0.3);
+  order: -1; /* Move today's column to the left */
+}
+
+/* Ensure today's column appears first */
+.rbc-time-view .rbc-header.rbc-today {
+  order: -1;
+}
+
+.rbc-time-view .rbc-day-bg.rbc-today {
+  order: -1;
+}
+
+.rbc-time-view .rbc-events-container.rbc-today {
+  order: -1;
+}
+
+/* Day view styles */
+.rbc-day-view {
+  border: none;
+}
+
+/* Hide react-big-calendar's built-in toolbar */
+.rbc-toolbar {
+  display: none !important;
+}
+
+
+/* Popup styles */
+.rbc-overlay {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  z-index: 1000;
+}
+
+.rbc-overlay-header {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .rbc-toolbar-label {
+    font-size: 20px;
+    text-align: center;
+  }
+  
+  .rbc-btn-group {
+    justify-content: center;
+  }
+  
+  .rbc-header {
+    padding: 12px 4px;
+    font-size: 12px;
+  }
+  
+  .rbc-date-cell {
+    padding: 8px 4px;
+    font-size: 14px;
+  }
+  
+  .rbc-event {
+    font-size: 11px;
+    padding: 2px 4px;
+  }
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+  .rbc-calendar {
+    background: #1a1a1a;
+    color: #ffffff;
+  }
+  
+  .rbc-header {
+    background: #2d2d2d;
+    color: #ffffff;
+    border-bottom-color: #404040;
+  }
+  
+  .rbc-time-gutter {
+    background: #2d2d2d;
+    border-right-color: #404040;
+  }
+  
+  .rbc-toolbar {
+    background: #2d2d2d;
+    border-bottom-color: #404040;
+  }
+  
+  .rbc-toolbar-label {
+    color: #ffffff;
+  }
+  
+  .rbc-btn-group > button {
+    background: #2d2d2d;
+    border-color: #404040;
+    color: #ffffff;
+  }
+  
+  .rbc-btn-group > button:hover {
+    background: #404040;
+  }
+}

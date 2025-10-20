@@ -13,8 +13,8 @@ export const Layout = ({ children }: LayoutProps) => {
   return (
     <motion.div
       animate={{
-        scale: isModalOpen ? 0.95 : 1,
-        opacity: isModalOpen ? 0.85 : 1,
+        scale: isModalOpen ? 1 : 1,
+        opacity: isModalOpen ? 1 : 1,
       }}
       transition={{
         duration: 0.4,

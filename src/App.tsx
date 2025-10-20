@@ -8,25 +8,34 @@ import { Navigation } from './components/Navigation';
 import { Layout } from './components/Layout';
 import { KudosCelebration } from './components/KudosCelebration';
 import { ToastContainer } from './components/Toast';
+import { FamilySetupModal } from './components/FamilySetupModal';
 import { Dashboard } from './features/dashboard/Dashboard';
-import { Calendar } from './features/calendar/Calendar';
+import { CalendarView } from './features/calendar/CalendarView';
 import { TodosView } from './features/todos/TodosView';
 import { SettingsView } from './features/settings/SettingsView';
 import { Screensaver } from './features/screensaver/Screensaver';
 import { useIdleDetection } from './hooks/useIdleDetection';
 import { useStreakTracking } from './hooks/useStreaks';
 import { useGoogleCalendarSync } from './hooks/useGoogleCalendarSync';
+import { useCurrentHousehold } from './hooks/useCurrentHousehold';
 
 function AnimatedRoutes() {
   const location = useLocation();
   const [showScreensaver, setShowScreensaver] = useState(false);
+  const [showFamilySetup, setShowFamilySetup] = useState(false);
   const isIdle = useIdleDetection(300000); // 5 minutes
+  const { needsSetup, setHousehold } = useCurrentHousehold();
   
   // Track streaks automatically based on task completion
   useStreakTracking();
   
   // Sync Google Calendar events automatically
   useGoogleCalendarSync();
+  
+  // Show family setup if needed - DISABLED FOR NOW
+  // if (needsSetup && !showFamilySetup) {
+  //   setShowFamilySetup(true);
+  // }
   
   // Show screensaver when idle or manually triggered
   if (isIdle && !showScreensaver) {
@@ -43,6 +52,20 @@ function AnimatedRoutes() {
       <Screensaver
         onWake={() => {
           setShowScreensaver(false);
+        }}
+      />
+    );
+  }
+  
+  // Show family setup modal
+  if (showFamilySetup) {
+    return (
+      <FamilySetupModal
+        isOpen={showFamilySetup}
+        onClose={() => setShowFamilySetup(false)}
+        onComplete={async (householdId) => {
+          await setHousehold(householdId);
+          setShowFamilySetup(false);
         }}
       />
     );
@@ -69,7 +92,7 @@ function AnimatedRoutes() {
               path="/calendar"
               element={
                 <PageTransition direction={currentIndex}>
-                  <Calendar />
+                  <CalendarView />
                 </PageTransition>
               }
             />
