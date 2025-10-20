@@ -78,6 +78,13 @@ export const useCurrentHousehold = () => {
       localStorage.removeItem('currentHouseholdId');
     }
     
+    // Clear family-specific sync timestamps to force fresh sync
+    if (householdId) {
+      const familySyncKey = `lastGoogleCalendarSync_${householdId}`;
+      localStorage.removeItem(familySyncKey);
+      console.log('🔄 Cleared sync timestamp for family:', householdId);
+    }
+
     // Invalidate all relevant queries to force fresh data
     console.log('🔄 Invalidating queries...');
     await Promise.all([

@@ -226,10 +226,16 @@ export const SettingsView = () => {
         console.log('Available calendars:', calendars);
         setAvailableCalendars(calendars);
         
-        // Auto-select the first calendar if none selected
-        if (calendars.length > 0 && selectedCalendarIds.length === 0) {
+        // Load saved calendar selections (family-specific)
+        const familyCalendarKey = `selectedGoogleCalendarIds_${currentHouseholdId}`;
+        const savedCalendarIds = localStorage.getItem(familyCalendarKey);
+        if (savedCalendarIds) {
+          const parsed = JSON.parse(savedCalendarIds);
+          setSelectedCalendarIds(parsed);
+        } else if (calendars.length > 0) {
+          // Auto-select the first calendar if none selected for this family
           setSelectedCalendarIds([calendars[0].id]);
-          localStorage.setItem('selectedGoogleCalendarIds', JSON.stringify([calendars[0].id]));
+          localStorage.setItem(familyCalendarKey, JSON.stringify([calendars[0].id]));
         }
       } catch (error) {
         console.error('Failed to load calendars:', error);
@@ -240,7 +246,7 @@ export const SettingsView = () => {
       console.error('Failed to get Google Calendar token:', error);
       setIsLoadingCalendars(false);
     }
-  }, [selectedCalendarIds.length]);
+  }, [selectedCalendarIds.length, currentHouseholdId]);
 
   // Load calendars when Google Calendar is connected
   useEffect(() => {
@@ -256,21 +262,24 @@ export const SettingsView = () => {
       : [...selectedCalendarIds, calendarId];
     
     setSelectedCalendarIds(newSelection);
-    localStorage.setItem('selectedGoogleCalendarIds', JSON.stringify(newSelection));
-    console.log('Selected calendars:', newSelection);
+    const familyCalendarKey = `selectedGoogleCalendarIds_${currentHouseholdId}`;
+    localStorage.setItem(familyCalendarKey, JSON.stringify(newSelection));
+    console.log('Selected calendars for family', currentHouseholdId, ':', newSelection);
   };
 
   // Select all calendars
   const handleSelectAll = () => {
     const allIds = availableCalendars.map(cal => cal.id);
     setSelectedCalendarIds(allIds);
-    localStorage.setItem('selectedGoogleCalendarIds', JSON.stringify(allIds));
+    const familyCalendarKey = `selectedGoogleCalendarIds_${currentHouseholdId}`;
+    localStorage.setItem(familyCalendarKey, JSON.stringify(allIds));
   };
 
   // Deselect all calendars
   const handleDeselectAll = () => {
     setSelectedCalendarIds([]);
-    localStorage.setItem('selectedGoogleCalendarIds', JSON.stringify([]));
+    const familyCalendarKey = `selectedGoogleCalendarIds_${currentHouseholdId}`;
+    localStorage.setItem(familyCalendarKey, JSON.stringify([]));
   };
 
   // Handle timezone change

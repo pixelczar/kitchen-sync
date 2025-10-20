@@ -149,6 +149,10 @@ export const useGoogleCalendarSync = () => {
         console.log(`Sync complete: ${savedCount} new, ${updatedCount} updated, ${skippedCount} unchanged`);
         setLastSyncTime(new Date());
         
+        // Update family-specific sync timestamp
+        const familySyncKey = `lastGoogleCalendarSync_${currentHouseholdId}`;
+        localStorage.setItem(familySyncKey, Date.now().toString());
+        
       } catch (error) {
         console.error('Google Calendar sync failed:', error);
         setSyncError(error instanceof Error ? error.message : 'Sync failed');
@@ -169,27 +173,30 @@ export const useGoogleCalendarSync = () => {
         const accessToken = await getGoogleCalendarToken();
         if (!accessToken) return;
 
-        // Check if we've synced recently (within last hour)
-        const lastSync = localStorage.getItem('lastGoogleCalendarSync');
-        const now = Date.now();
-        const oneHour = 60 * 60 * 1000;
-        
-        if (lastSync && (now - parseInt(lastSync)) < oneHour) {
-          console.log('Google Calendar sync skipped - synced recently');
-          return;
-        }
+      // Check if we've synced recently for this family (within last hour)
+      const familySyncKey = `lastGoogleCalendarSync_${currentHouseholdId}`;
+      const lastSync = localStorage.getItem(familySyncKey);
+      const now = Date.now();
+      const oneHour = 60 * 60 * 1000;
+      
+      if (lastSync && (now - parseInt(lastSync)) < oneHour) {
+        console.log('Google Calendar sync skipped - synced recently for family', currentHouseholdId, 'last sync:', new Date(parseInt(lastSync)).toLocaleString());
+        return;
+      }
+      
+      console.log('Google Calendar sync will proceed for family', currentHouseholdId, 'last sync was:', lastSync ? new Date(parseInt(lastSync)).toLocaleString() : 'never');
 
         // Initial sync after a short delay to ensure app is loaded
         const initialSyncTimeout = setTimeout(() => {
           syncGoogleCalendar().then(() => {
-            localStorage.setItem('lastGoogleCalendarSync', now.toString());
+            localStorage.setItem(familySyncKey, now.toString());
           });
         }, 2000);
 
         // Set up interval for periodic sync (every 2 hours to minimize API calls)
         const interval = setInterval(() => {
           syncGoogleCalendar().then(() => {
-            localStorage.setItem('lastGoogleCalendarSync', Date.now().toString());
+            localStorage.setItem(familySyncKey, Date.now().toString());
           });
         }, 2 * 60 * 60 * 1000); // 2 hours
 

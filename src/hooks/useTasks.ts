@@ -3,19 +3,18 @@ import { collection, query, where, getDocs, doc, updateDoc, addDoc, deleteDoc } 
 import { firestore } from '../lib/firebase';
 import { queueFirestoreWrite } from '../lib/firestore-batch';
 import { useUIStore } from '../stores/uiStore';
+import { useCurrentHousehold } from './useCurrentHousehold';
 import type { Task } from '../types';
 
-const HOUSEHOLD_ID = import.meta.env.VITE_HOUSEHOLD_ID || 'demo-family-001';
-
 // Stub task data for demo/fallback
-const getStubTasks = (): Task[] => {
+const getStubTasks = (householdId: string): Task[] => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
   return [
     {
       id: 'task-1',
-      householdId: HOUSEHOLD_ID,
+      householdId,
       title: 'Make bed',
       description: 'Make your bed every morning',
       assignedTo: 'user-1', // Emma
@@ -26,7 +25,7 @@ const getStubTasks = (): Task[] => {
     },
     {
       id: 'task-2',
-      householdId: HOUSEHOLD_ID,
+      householdId,
       title: 'Feed the dog',
       description: 'Give Rex his breakfast and dinner',
       assignedTo: 'user-2', // Liam
@@ -38,7 +37,7 @@ const getStubTasks = (): Task[] => {
     },
     {
       id: 'task-3',
-      householdId: HOUSEHOLD_ID,
+      householdId,
       title: 'Set the table',
       description: 'Set the table for dinner',
       assignedTo: 'user-3', // Ava
@@ -49,7 +48,7 @@ const getStubTasks = (): Task[] => {
     },
     {
       id: 'task-4',
-      householdId: HOUSEHOLD_ID,
+      householdId,
       title: 'Take out trash',
       description: 'Take the kitchen trash to the curb',
       assignedTo: 'user-4', // Noah
@@ -60,7 +59,7 @@ const getStubTasks = (): Task[] => {
     },
     {
       id: 'todo-1',
-      householdId: HOUSEHOLD_ID,
+      householdId,
       title: 'Plan weekend trip',
       description: 'Research and plan family weekend getaway',
       assignedTo: 'user-5', // Mom
@@ -85,10 +84,17 @@ const getStubTasks = (): Task[] => {
 };
 
 export const useTasks = () => {
+  const { currentHouseholdId } = useCurrentHousehold();
+  
   return useQuery({
-    queryKey: ['tasks', HOUSEHOLD_ID],
+    queryKey: ['tasks', currentHouseholdId],
     queryFn: async () => {
       try {
+        if (!currentHouseholdId) {
+          console.log('No current household ID, returning empty array');
+          return [];
+        }
+
         // Add timeout to prevent hanging
         const timeoutPromise = new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Query timeout')), 3000)
@@ -97,7 +103,7 @@ export const useTasks = () => {
         const queryPromise = (async () => {
           const q = query(
             collection(firestore, 'tasks'),
-            where('householdId', '==', HOUSEHOLD_ID)
+            where('householdId', '==', currentHouseholdId)
           );
           const snapshot = await getDocs(q);
           return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Task));
@@ -107,15 +113,16 @@ export const useTasks = () => {
         
         // If no tasks from DB, use stub data
         if (tasks.length === 0) {
-          return getStubTasks();
+          return getStubTasks(currentHouseholdId);
         }
         
         return tasks;
       } catch (error) {
         console.warn('Tasks query failed, using stub data:', error);
-        return getStubTasks();
+        return getStubTasks(currentHouseholdId || 'demo-family-001');
       }
     },
+    enabled: !!currentHouseholdId,
     retry: (failureCount, error) => {
       // Don't retry on timeout errors
       if (error?.message?.includes('timeout')) {
@@ -163,10 +170,15 @@ export const useTaskMutations = () => {
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
+  const { currentHouseholdId } = useCurrentHousehold();
 
   return useMutation({
     mutationFn: async (taskData: Partial<Task>) => {
       console.log('Creating task with data:', taskData);
+      
+      if (!currentHouseholdId) {
+        throw new Error('No current household ID');
+      }
       
       // Remove undefined values (Firestore doesn't accept them)
       const cleanedData: Record<string, any> = {};
@@ -178,7 +190,7 @@ export const useCreateTask = () => {
       
       const newTask = {
         ...cleanedData,
-        householdId: HOUSEHOLD_ID,
+        householdId: currentHouseholdId,
         completed: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

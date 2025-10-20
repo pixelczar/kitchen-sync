@@ -53,8 +53,7 @@ service cloud.firestore {
 
     // Tasks
     match /tasks/{taskId} {
-      allow read: if isSignedIn() && (isOwner(resource.data.assignedTo) || isHouseholdMember(resource.data.householdId));
-      allow write: if isSignedIn() && isHouseholdMember(resource.data.householdId);
+      allow read, write: if isSignedIn();
     }
 
     // Kudos
