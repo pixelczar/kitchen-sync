@@ -91,7 +91,7 @@ class CalendarDataManagerImpl implements CalendarDataManager {
       endTime: cleanedData.endTime || '',
       assignedTo: cleanedData.assignedTo || '',
       color: cleanedData.color || '#0A95FF',
-      householdId: HOUSEHOLD_ID,
+      householdId,
       source: 'manual',
       createdAt: newEvent.createdAt,
       updatedAt: newEvent.updatedAt,
@@ -258,7 +258,7 @@ export const useCalendarData = () => {
   console.warn('useCalendarData is deprecated. Use useCalendarEvents hook instead.');
   
   return {
-    getEvents: (startDate: Date, endDate: Date) => {
+    getEvents: (_startDate: Date, _endDate: Date) => {
       console.error('useCalendarData.getEvents called without household ID. Use useCalendarEvents hook instead.');
       return Promise.resolve([]);
     },

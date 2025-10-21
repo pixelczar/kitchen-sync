@@ -9,7 +9,7 @@ const routeDescriptions = {
   '/': 'See everyone\'s progress',
   '/calendar': 'Events and schedules',
   '/todos': 'Tasks and to-dos',
-  '/settings': 'App settings and preferences'
+  '/settings': 'Settings and preferences'
 };
 
 export const Breadcrumb = ({ className = '' }: BreadcrumbProps) => {

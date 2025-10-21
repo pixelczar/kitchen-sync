@@ -37,7 +37,7 @@ export const generateDemoCalendarEvents = (): CalendarEvent[] => {
     date.setDate(date.getDate() + i);
     
     // Skip weekends for some events
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    // const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     
     // Generate 1-3 events per day
     const eventCount = Math.floor(Math.random() * 3) + 1;
@@ -134,7 +134,7 @@ function getEventDescription(type: string): string {
     education: 'Learning and educational activities',
   };
   
-  return descriptions[type] || 'Family activity';
+  return descriptions[type as keyof typeof descriptions] || 'Family activity';
 }
 
 function getEventLocation(type: string): string {
@@ -151,7 +151,7 @@ function getEventLocation(type: string): string {
     education: 'Public Library',
   };
   
-  return locations[type] || 'Various Locations';
+  return locations[type as keyof typeof locations] || 'Various Locations';
 }
 
 function isWeekend(date: Date): boolean {

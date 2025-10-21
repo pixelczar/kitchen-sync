@@ -33,7 +33,7 @@ export interface ForecastDay {
  * Get user's location using browser geolocation API
  */
 export const getUserLocation = (): Promise<{ lat: number; lon: number }> => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     if (!navigator.geolocation) {
       console.log('🌤️ Geolocation not supported, using fallback location');
       // Fallback to New York City

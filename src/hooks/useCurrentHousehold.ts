@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from './useAuth';
 import { useHouseholds } from './useHouseholds';
-import { Household } from '../types';
 
 export const useCurrentHousehold = () => {
-  const { user } = useAuth();
   const { data: households, isLoading, error } = useHouseholds();
   const queryClient = useQueryClient();
   const [currentHouseholdId, setCurrentHouseholdId] = useState<string | null>(null);

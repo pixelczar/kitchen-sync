@@ -70,7 +70,7 @@ const getStubTasks = (householdId: string): Task[] => {
     },
     {
       id: 'todo-2',
-      householdId: HOUSEHOLD_ID,
+      householdId,
       title: 'Buy groceries',
       description: 'Weekly grocery shopping',
       assignedTo: 'user-5', // Mom

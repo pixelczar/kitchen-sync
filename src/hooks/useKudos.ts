@@ -1,39 +1,50 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, addDoc, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
+import { useCurrentHousehold } from './useCurrentHousehold';
 import type { Kudos } from '../types';
 
-const HOUSEHOLD_ID = import.meta.env.VITE_HOUSEHOLD_ID || 'demo-family-001';
-
 export const useKudos = (userId?: string) => {
+  const { currentHouseholdId } = useCurrentHousehold();
+  
   return useQuery({
-    queryKey: ['kudos', HOUSEHOLD_ID, userId],
+    queryKey: ['kudos', currentHouseholdId, userId],
     queryFn: async () => {
+      if (!currentHouseholdId) {
+        return [];
+      }
+      
       const q = userId
         ? query(
             collection(firestore, 'kudos'),
-            where('householdId', '==', HOUSEHOLD_ID),
+            where('householdId', '==', currentHouseholdId),
             where('to', '==', userId),
             orderBy('timestamp', 'desc'),
             limit(50)
           )
         : query(
             collection(firestore, 'kudos'),
-            where('householdId', '==', HOUSEHOLD_ID),
+            where('householdId', '==', currentHouseholdId),
             orderBy('timestamp', 'desc'),
             limit(100)
           );
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Kudos));
     },
+    enabled: !!currentHouseholdId,
   });
 };
 
 export const useSendKudos = () => {
   const queryClient = useQueryClient();
+  const { currentHouseholdId } = useCurrentHousehold();
 
   return useMutation({
     mutationFn: async (kudosData: Omit<Kudos, 'id' | 'householdId' | 'timestamp'>) => {
+      if (!currentHouseholdId) {
+        throw new Error('No current household ID');
+      }
+      
       // Remove undefined values (Firestore doesn't accept them)
       const cleanedData: Record<string, any> = {};
       Object.entries(kudosData).forEach(([key, value]) => {
@@ -44,7 +55,7 @@ export const useSendKudos = () => {
       
       const newKudos = {
         ...cleanedData,
-        householdId: HOUSEHOLD_ID,
+        householdId: currentHouseholdId,
         timestamp: new Date().toISOString(),
       };
       

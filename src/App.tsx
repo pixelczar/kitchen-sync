@@ -24,7 +24,7 @@ function AnimatedRoutes() {
   const [showScreensaver, setShowScreensaver] = useState(false);
   const [showFamilySetup, setShowFamilySetup] = useState(false);
   const isIdle = useIdleDetection(300000); // 5 minutes
-  const { needsSetup, setHousehold } = useCurrentHousehold();
+  const { setHousehold } = useCurrentHousehold();
   
   // Track streaks automatically based on task completion
   useStreakTracking();

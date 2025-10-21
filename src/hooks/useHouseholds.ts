@@ -238,7 +238,7 @@ export const useDeleteHousehold = () => {
       const household = householdDoc.data() as Household;
       
       // Only allow deletion if user is the creator
-      if (household.createdBy !== user.uid) {
+      if (household.createdBy && household.createdBy !== user.uid) {
         throw new Error('Only the family creator can delete this family');
       }
       

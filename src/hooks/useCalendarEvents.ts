@@ -88,6 +88,7 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
 
 export const useCreateCalendarEvent = () => {
   const queryClient = useQueryClient();
+  const { currentHouseholdId } = useCurrentHousehold();
 
   return useMutation({
     mutationFn: async (eventData: Partial<CalendarEvent>) => {
@@ -101,7 +102,7 @@ export const useCreateCalendarEvent = () => {
       
       const newEvent = {
         ...cleanedData,
-        householdId: HOUSEHOLD_ID,
+        householdId: currentHouseholdId,
         source: 'manual',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

@@ -4,13 +4,13 @@ import { useWeather } from '../../hooks/useWeather';
 import { getMeteoconsIcon } from '../../lib/weather';
 import { Breadcrumb } from '../../components/Breadcrumb';
 import { WeatherModal } from '../../components/WeatherModal';
-import { useAuth } from '../../hooks/useAuth';
+import { useCurrentHousehold } from '../../hooks/useCurrentHousehold';
 
 export const Header = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const { data: weatherData, isLoading } = useWeather();
-  const { user } = useAuth();
+  const { currentHousehold } = useCurrentHousehold();
   
   useEffect(() => {
     const timer = setInterval(() => {
@@ -78,14 +78,14 @@ export const Header = () => {
         {/* Logo and Breadcrumb */}
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-black text-charcoal tracking-tight">
-            KS
+            {currentHousehold?.name || 'KS'}
           </h1>
           <Breadcrumb />
         </div>
         
         <div className="flex items-center gap-8">
           {/* User Status */}
-          {user && (
+          {/* {user && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green/10 border border-green/20">
               {user.photoURL && (
                 <img src={user.photoURL} alt="avatar" className="w-6 h-6 rounded-full" />
@@ -95,7 +95,7 @@ export const Header = () => {
               </div>
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
             </div>
-          )}
+          )} */}
           
           {/* Simple Weather Widget */}
           {weatherData && !isLoading && (

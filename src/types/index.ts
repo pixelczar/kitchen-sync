@@ -80,6 +80,7 @@ export interface Household {
   id: string;
   name: string;
   members: string[]; // User IDs
+  createdBy?: string; // User ID of creator
   createdAt: string;
   settings: HouseholdSettings;
 }
