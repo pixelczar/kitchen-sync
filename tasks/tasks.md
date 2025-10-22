@@ -178,7 +178,84 @@
 
 ---
 
-## Week 5: Final Polish & Deployment
+## Week 5: Final Polish & Branding
+
+### Authentication & Login System
+
+- [ ] **Create login page with authentication flow**
+  - Design login page with KitchenSync branding
+  - Implement Firebase Authentication
+  - Handle login/logout states
+  - Acceptance: Users can log in and access the app
+
+- [ ] **Add KitchenSync branding to loaders**
+  - Replace generic loading spinners with branded ones
+  - Add KitchenSync logo to loading states
+  - Consistent branding across all loading experiences
+  - Acceptance: All loaders show KitchenSync branding
+
+- [ ] **Add KitchenSync branding to login pages**
+  - Brand OAuth callback pages
+  - Brand Google Calendar/Photos connection flows
+  - Consistent visual identity throughout auth flow
+  - Acceptance: All auth-related pages show KitchenSync branding
+
+- [ ] **Add KitchenSync branding to handoff pages**
+  - Brand transition pages between features
+  - Brand settings and configuration pages
+  - Consistent navigation and branding
+  - Acceptance: All handoff/transition pages show KitchenSync branding
+
+### Todo & Kudos Rewards System
+
+- [ ] **Design and implement rewards system for todo completion**
+  - Define point values for different todo types
+  - Implement points tracking in database
+  - Display points on person cards
+  - Acceptance: Users earn points for completing todos
+
+- [ ] **Enhance kudos system with rewards integration**
+  - Add point values to kudos giving
+  - Integrate kudos with overall points system
+  - Show points earned from kudos
+  - Acceptance: Kudos give points to recipients
+
+- [ ] **Implement points system for todo completion and kudos giving**
+  - Create points calculation logic
+  - Store points in user profiles
+  - Display points history
+  - Acceptance: Points are calculated and stored correctly
+
+- [ ] **Create rewards catalog or achievement system**
+  - Design achievement badges
+  - Create rewards catalog UI
+  - Implement achievement unlocking logic
+  - Acceptance: Users can view and earn achievements
+
+#### Rewards System Design Considerations
+
+**Point Values (Suggested):**
+- Daily chores: 5 points each
+- Weekly chores: 10 points each
+- Shared todos: 3 points each
+- Kudos received: 2 points each
+- Kudos given: 1 point each
+- Streak milestones: 10-50 points
+
+**Achievement Categories:**
+- 🏆 Streak Master (7+ day streaks)
+- 💪 Task Champion (100+ tasks completed)
+- ❤️ Kindness King/Queen (50+ kudos given)
+- 🌟 Team Player (100+ kudos received)
+- 🎯 Consistency Pro (30+ day streak)
+- 🚀 Speed Demon (10 tasks in one day)
+
+**Rewards Ideas:**
+- Choose family movie night
+- Pick dinner menu
+- Extra screen time
+- Special family outing
+- Choose weekend activity
 
 ### Two-Way Google Calendar Sync
 

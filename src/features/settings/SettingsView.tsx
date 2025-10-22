@@ -12,6 +12,7 @@ import { UserModal } from '../../components/UserModal';
 import { FamilySetupModal } from '../../components/FamilySetupModal';
 import { useToast } from '../../components/Toast';
 import { useTheme, type ThemeMode } from '../../contexts/ThemeContext';
+import LoadingSpinnerMedium from '../../components/LoadingSpinner';
 import { User } from '../../types';
 
 export const SettingsView = () => {
@@ -509,8 +510,7 @@ export const SettingsView = () => {
     return (
       <main className="max-w-7xl mx-auto px-6 py-8 pb-40 overflow-y-auto h-full">
         <div className="flex items-center justify-center text-gray-medium">
-          <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2" />
-          Loading...
+          <LoadingSpinnerSmall message="Loading..." />
         </div>
       </main>
     );
@@ -1108,8 +1108,7 @@ export const SettingsView = () => {
           {isActuallySwitching && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex items-center justify-center z-10">
               <div className="text-center">
-                <div className="w-8 h-8 border-2 border-purple border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <p className="text-sm text-gray-medium">Switching families...</p>
+                <LoadingSpinnerSmall message="Switching families..." />
               </div>
             </div>
           )}
@@ -1165,10 +1164,7 @@ export const SettingsView = () => {
             {/* Loading State */}
             {isActuallySwitching && (
               <div className="p-8 rounded-xl bg-gray-light/30 border border-gray-light text-center">
-                <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-gray-medium">
-                  Loading family members...
-                </p>
+                <LoadingSpinnerMedium message="Loading family members..." />
               </div>
             )}
 

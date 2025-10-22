@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
-import { queueFirestoreWrite } from '../lib/firestore-batch';
 import { useUIStore } from '../stores/uiStore';
 import { useCurrentHousehold } from './useCurrentHousehold';
 import type { Task } from '../types';
