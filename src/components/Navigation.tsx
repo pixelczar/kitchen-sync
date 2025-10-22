@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Calendar, CheckSquare, Settings } from 'lucide-react'; // eslint-disable-line @typescript-eslint/no-unused-vars
+import { LayoutDashboard, Calendar, CheckSquare } from 'lucide-react';
+// import { Settings } from 'lucide-react'; // Keep for future use
 
 // Animated icon component
 const AnimatedIcon = ({ 

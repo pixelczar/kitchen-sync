@@ -12,7 +12,7 @@ import { UserModal } from '../../components/UserModal';
 import { FamilySetupModal } from '../../components/FamilySetupModal';
 import { useToast } from '../../components/Toast';
 import { useTheme, type ThemeMode } from '../../contexts/ThemeContext';
-import LoadingSpinnerMedium from '../../components/LoadingSpinner';
+import { LoadingSpinnerSmall } from '../../components/LoadingSpinner';
 import { User } from '../../types';
 
 export const SettingsView = () => {
