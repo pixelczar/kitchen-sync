@@ -35,7 +35,6 @@ export interface ForecastDay {
 export const getUserLocation = (): Promise<{ lat: number; lon: number }> => {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      console.log('🌤️ Geolocation not supported, using fallback location');
       // Fallback to New York City
       resolve({ lat: 40.7128, lon: -74.0060 });
       return;
@@ -43,7 +42,6 @@ export const getUserLocation = (): Promise<{ lat: number; lon: number }> => {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        console.log('🌤️ Geolocation successful:', position.coords);
         resolve({
           lat: position.coords.latitude,
           lon: position.coords.longitude,
@@ -98,32 +96,59 @@ export const fetchWeatherForecast = async (lat: number, lon: number): Promise<Fo
 
   const data = await response.json();
   
-  // Group by day and take noon forecast for each day
+  // Group by day and find the best representative forecast for each day
   const dailyForecasts: ForecastDay[] = [];
-  const seenDates = new Set<string>();
+  const dayGroups: { [dateStr: string]: any[] } = {};
   
+  // Group all forecasts by date
   for (const item of data.list) {
     const date = new Date(item.dt * 1000);
     const dateStr = date.toISOString().split('T')[0];
-    const hour = date.getHours();
     
-    // Take the forecast around noon (12:00) for each day
-    if (!seenDates.has(dateStr) && (hour >= 11 && hour <= 13)) {
-      seenDates.add(dateStr);
-      dailyForecasts.push({
-        date: dateStr,
-        temp: Math.round(item.main.temp),
-        tempMin: Math.round(item.main.temp_min),
-        tempMax: Math.round(item.main.temp_max),
-        description: item.weather[0].description,
-        icon: item.weather[0].icon,
-        humidity: item.main.humidity,
-        windSpeed: Math.round(item.wind.speed),
-        pop: Math.round(item.pop * 100),
-      });
-      
-      if (dailyForecasts.length >= 5) break;
+    if (!dayGroups[dateStr]) {
+      dayGroups[dateStr] = [];
     }
+    dayGroups[dateStr].push(item);
+  }
+  
+  // Process each day to get the best representative forecast
+  const sortedDates = Object.keys(dayGroups).sort();
+  
+  for (const dateStr of sortedDates) {
+    if (dailyForecasts.length >= 5) break;
+    
+    const dayForecasts = dayGroups[dateStr];
+    
+    // Find the forecast closest to noon (12:00) for the main display
+    let bestForecast = dayForecasts[0];
+    let bestHourDiff = Math.abs(dayForecasts[0].dt * 1000 - new Date(dateStr + 'T12:00:00Z').getTime());
+    
+    for (const forecast of dayForecasts) {
+      const forecastDate = new Date(forecast.dt * 1000);
+      const hourDiff = Math.abs(forecastDate.getTime() - new Date(dateStr + 'T12:00:00Z').getTime());
+      
+      if (hourDiff < bestHourDiff) {
+        bestHourDiff = hourDiff;
+        bestForecast = forecast;
+      }
+    }
+    
+    // Calculate actual min/max for the day from all forecasts
+    const temps = dayForecasts.map(f => f.main.temp);
+    const actualMin = Math.min(...temps);
+    const actualMax = Math.max(...temps);
+    
+    dailyForecasts.push({
+      date: dateStr,
+      temp: Math.round(bestForecast.main.temp),
+      tempMin: Math.round(actualMin),
+      tempMax: Math.round(actualMax),
+      description: bestForecast.weather[0].description,
+      icon: bestForecast.weather[0].icon,
+      humidity: bestForecast.main.humidity,
+      windSpeed: Math.round(bestForecast.wind.speed),
+      pop: Math.round(bestForecast.pop * 100),
+    });
   }
   
   return dailyForecasts;

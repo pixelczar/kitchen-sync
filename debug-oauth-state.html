@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth State Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .debug-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .debug-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        .warning { color: #ffc107; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>OAuth State Debug Tool</h1>
+    
+    <div class="debug-section">
+        <h3>Current Session Storage</h3>
+        <div id="session-storage"></div>
+        <button onclick="clearSessionStorage()">Clear Session Storage</button>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Current URL Parameters</h3>
+        <div id="url-params"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Test State Generation</h3>
+        <button onclick="generateTestState()">Generate Test State</button>
+        <div id="test-state"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>State Verification Test</h3>
+        <button onclick="testStateVerification()">Test State Verification</button>
+        <div id="verification-result"></div>
+    </div>
+
+    <script>
+        function updateDisplay() {
+            // Display session storage
+            const sessionDiv = document.getElementById('session-storage');
+            const googlePhotosState = sessionStorage.getItem('googlePhotosState');
+            const googleCalendarState = sessionStorage.getItem('googleCalendarState');
+            
+            sessionDiv.innerHTML = `
+                <div class="debug-item">Google Photos State: ${googlePhotosState || 'Not set'}</div>
+                <div class="debug-item">Google Calendar State: ${googleCalendarState || 'Not set'}</div>
+            `;
+            
+            // Display URL parameters
+            const urlDiv = document.getElementById('url-params');
+            const urlParams = new URLSearchParams(window.location.search);
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            
+            const state = urlParams.get('state') || hashParams.get('state');
+            const accessToken = hashParams.get('access_token');
+            const error = urlParams.get('error') || hashParams.get('error');
+            
+            urlDiv.innerHTML = `
+                <div class="debug-item">State from URL: ${state || 'Not found'}</div>
+                <div class="debug-item">Access Token: ${accessToken ? 'Present' : 'Not found'}</div>
+                <div class="debug-item">Error: ${error || 'None'}</div>
+                <div class="debug-item">Full URL: ${window.location.href}</div>
+            `;
+        }
+        
+        function clearSessionStorage() {
+            sessionStorage.removeItem('googlePhotosState');
+            sessionStorage.removeItem('googleCalendarState');
+            updateDisplay();
+        }
+        
+        function generateTestState() {
+            const state = Math.random().toString(36).substring(2, 15);
+            sessionStorage.setItem('googleCalendarState', state);
+            document.getElementById('test-state').innerHTML = `
+                <div class="debug-item success">Generated state: ${state}</div>
+            `;
+            updateDisplay();
+        }
+        
+        function testStateVerification() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const state = urlParams.get('state') || hashParams.get('state');
+            
+            const googlePhotosState = sessionStorage.getItem('googlePhotosState');
+            const googleCalendarState = sessionStorage.getItem('googleCalendarState');
+            
+            const resultDiv = document.getElementById('verification-result');
+            
+            if (!state) {
+                resultDiv.innerHTML = '<div class="debug-item error">No state parameter found in URL</div>';
+                return;
+            }
+            
+            const photosMatch = state === googlePhotosState;
+            const calendarMatch = state === googleCalendarState;
+            
+            resultDiv.innerHTML = `
+                <div class="debug-item">Received state: ${state}</div>
+                <div class="debug-item">Google Photos state: ${googlePhotosState || 'Not set'}</div>
+                <div class="debug-item">Google Calendar state: ${googleCalendarState || 'Not set'}</div>
+                <div class="debug-item ${photosMatch ? 'success' : 'error'}">Photos match: ${photosMatch}</div>
+                <div class="debug-item ${calendarMatch ? 'success' : 'error'}">Calendar match: ${calendarMatch}</div>
+                <div class="debug-item ${(photosMatch || calendarMatch) ? 'success' : 'error'}">Overall result: ${(photosMatch || calendarMatch) ? 'PASS' : 'FAIL'}</div>
+            `;
+        }
+        
+        // Update display on load
+        updateDisplay();
+        
+        // Update display when URL changes (for OAuth callbacks)
+        window.addEventListener('popstate', updateDisplay);
+        window.addEventListener('hashchange', updateDisplay);
+    </script>
+</body>
+</html>

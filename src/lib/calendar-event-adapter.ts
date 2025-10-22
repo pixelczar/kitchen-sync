@@ -90,6 +90,12 @@ export const toBigCalendarEvents = (events: CalendarEvent[]): BigCalendarEvent[]
  * Get event color for display
  */
 export const getEventColor = (event: BigCalendarEvent): string => {
+  // If it's a Google Calendar event, use the Google Calendar color function
+  if (event.resource?.source === 'google' && event.resource?.externalId) {
+    return getGoogleCalendarColor(event.resource.externalId);
+  }
+  
+  // For manual events, use the assigned color or default
   return event.resource?.color || '#0A95FF';
 };
 
@@ -108,7 +114,11 @@ export const getGoogleCalendarColor = (externalId?: string): string => {
   
   const colors = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', 
-    '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF6348'
+    '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF6348',
+    '#8B5CF6', '#A855F7', '#C084FC', '#DDD6FE',
+    '#0A95FF', '#3B82F6', '#60A5FA', '#93C5FD',
+    '#10B981', '#34D399', '#6EE7B7', '#A7F3D0',
+    '#F59E0B', '#FBBF24', '#FCD34D', '#FEF3C7'
   ];
   
   const hash = externalId.split('').reduce((a, b) => {

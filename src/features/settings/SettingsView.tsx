@@ -5,16 +5,21 @@ import { useCurrentHousehold } from '../../hooks/useCurrentHousehold';
 import { useHouseholds, useDeleteHousehold } from '../../hooks/useHouseholds';
 import { useHouseholdUserCounts } from '../../hooks/useHouseholdUserCounts';
 import { isGoogleCalendarConfigured, authorizeGoogleCalendar, fetchGoogleCalendars, getGoogleCalendarToken } from '../../lib/google-calendar';
-import { authorizeGooglePhotos, createPickerSession, checkPickerSession, getPickerMediaItems, getGooglePhotosToken, storeGooglePhotosToken, PickerMediaItem } from '../../lib/google-photos';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { authorizeGooglePhotos, createPickerSession, getGooglePhotosToken, storeGooglePhotosToken, waitForPickerCompletion, debugGooglePhotosAPI, PickerMediaItem } from '../../lib/google-photos';
 import { useGoogleCalendarSync } from '../../hooks/useGoogleCalendarSync';
 import { UserModal } from '../../components/UserModal';
 import { FamilySetupModal } from '../../components/FamilySetupModal';
+import { useToast } from '../../components/Toast';
+import { useTheme, type ThemeMode } from '../../contexts/ThemeContext';
 import { User } from '../../types';
 
 export const SettingsView = () => {
   const { user, loading, error, signIn, signOutUser } = useAuth();
   const { currentHousehold, currentHouseholdId, setHousehold, isSwitching } = useCurrentHousehold();
   const { data: users, isLoading: usersLoading, isFetching: usersFetching } = useUsers();
+  const { success, info, error: showError } = useToast();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   
   // Force refresh when switching families
   const handleFamilySwitch = async (householdId: string | null) => {
@@ -77,29 +82,17 @@ export const SettingsView = () => {
   
   // Check for existing tokens on component mount
   useEffect(() => {
-    // Log authentication status for debugging
-    console.log('Auth Status Check:', {
-      user: user ? {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        emailVerified: user.emailVerified,
-        photoURL: user.photoURL,
-        lastSignInTime: user.metadata?.lastSignInTime,
-        providerData: user.providerData
-      } : null,
-      currentHouseholdId: currentHouseholdId,
-      currentHouseholdName: currentHousehold?.name,
-      allHouseholds: allHouseholds?.map(h => ({ id: h.id, name: h.name, members: h.members.length }))
-    });
 
     const checkConnectionStatus = async () => {
       // Skip if we know functions aren't available
       if (!functionsAvailable) {
         const photosToken = localStorage.getItem('googlePhotosToken');
         const calendarToken = localStorage.getItem('googleCalendarToken');
-        setPhotosConnected(!!photosToken);
-        setGoogleConnected(!!calendarToken);
+        const photosConnected = !!photosToken;
+        const googleConnected = !!calendarToken;
+        
+        setPhotosConnected(photosConnected);
+        setGoogleConnected(googleConnected);
         return;
       }
       
@@ -107,8 +100,11 @@ export const SettingsView = () => {
         const photosToken = await getGooglePhotosToken();
         const calendarToken = await getGoogleCalendarToken();
         
-        setPhotosConnected(!!photosToken);
-        setGoogleConnected(!!calendarToken);
+        const photosConnected = !!photosToken;
+        const googleConnected = !!calendarToken;
+        
+        setPhotosConnected(photosConnected);
+        setGoogleConnected(googleConnected);
       } catch (error) {
         console.warn('Failed to check token status:', error);
         // Mark functions as unavailable to prevent repeated calls
@@ -118,8 +114,11 @@ export const SettingsView = () => {
         const photosToken = localStorage.getItem('googlePhotosToken');
         const calendarToken = localStorage.getItem('googleCalendarToken');
         
-        setPhotosConnected(!!photosToken);
-        setGoogleConnected(!!calendarToken);
+        const photosConnected = !!photosToken;
+        const googleConnected = !!calendarToken;
+        
+        setPhotosConnected(photosConnected);
+        setGoogleConnected(googleConnected);
       }
     };
 
@@ -143,7 +142,21 @@ export const SettingsView = () => {
       }
     };
 
+    // Listen for OAuth completion messages from popup windows
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+        console.log('OAuth success message received, updating connection status');
+        checkConnectionStatus();
+      } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+        console.log('OAuth error message received:', event.data.error);
+        setIsConnecting(false);
+      }
+    };
+
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('message', handleMessage);
     
     // Also check periodically in case of same-tab changes (reduced frequency)
     const interval = setInterval(checkConnectionStatus, 10000); // Check every 10 seconds instead of 1 second
@@ -160,13 +173,14 @@ export const SettingsView = () => {
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('message', handleMessage);
       clearInterval(interval);
     };
   }, [user, functionsAvailable, allHouseholds, currentHousehold?.name, currentHouseholdId]);
 
   const handleConnectGoogleCalendar = async () => {
     if (!isGoogleCalendarConfigured()) {
-      alert('Google Calendar API is not configured. See src/lib/google-calendar.ts for setup instructions.');
+      info('Google Calendar API is not configured. See src/lib/google-calendar.ts for setup instructions.', '⚙️');
       return;
     }
     
@@ -177,7 +191,7 @@ export const SettingsView = () => {
       console.log('Redirecting to Google Calendar OAuth...');
     } catch (error) {
       console.error('Failed to connect:', error);
-      alert('Failed to connect to Google Calendar');
+      showError('Failed to connect to Google Calendar');
       setIsConnecting(false);
     }
   };
@@ -191,7 +205,7 @@ export const SettingsView = () => {
       console.log('Disconnected from Google Calendar');
 
       // Show success message
-      alert('Disconnected from Google Calendar. Please refresh the page to see changes.');
+      success('Disconnected from Google Calendar. Please refresh the page to see changes.', '📅');
     } catch (error) {
       console.error('Failed to disconnect Google Calendar:', error);
     }
@@ -246,7 +260,7 @@ export const SettingsView = () => {
       console.error('Failed to get Google Calendar token:', error);
       setIsLoadingCalendars(false);
     }
-  }, [selectedCalendarIds.length, currentHouseholdId]);
+  }, [currentHouseholdId]);
 
   // Load calendars when Google Calendar is connected
   useEffect(() => {
@@ -264,7 +278,6 @@ export const SettingsView = () => {
     setSelectedCalendarIds(newSelection);
     const familyCalendarKey = `selectedGoogleCalendarIds_${currentHouseholdId}`;
     localStorage.setItem(familyCalendarKey, JSON.stringify(newSelection));
-    console.log('Selected calendars for family', currentHouseholdId, ':', newSelection);
   };
 
   // Select all calendars
@@ -308,11 +321,14 @@ export const SettingsView = () => {
         accessToken: result,
         expiresAt: Date.now() + (3600 * 1000) // 1 hour from now
       });
+      
+      // Update state immediately after successful connection
       setPhotosConnected(true);
+      console.log('Successfully connected to Google Photos!');
     } catch (error) {
       console.error('Failed to connect:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to connect to Google Photos: ${errorMessage}`);
+      showError(`Failed to connect to Google Photos: ${errorMessage}`);
     } finally {
       setIsConnecting(false);
     }
@@ -327,7 +343,7 @@ export const SettingsView = () => {
       console.log('Disconnected from Google Photos');
       
       // Show success message
-      alert('Disconnected from Google Photos. Please refresh the page to see changes.');
+      success('Disconnected from Google Photos. Please refresh the page to see changes.', '📸');
     } catch (error) {
       console.error('Failed to disconnect Google Photos:', error);
     }
@@ -338,7 +354,7 @@ export const SettingsView = () => {
     try {
       const token = await getGooglePhotosToken();
       if (!token) {
-        alert('Please connect to Google Photos first');
+        info('Please connect to Google Photos first', '🔗');
         return;
       }
 
@@ -354,69 +370,62 @@ export const SettingsView = () => {
         const pickerWindow = window.open(session.pickerUri, 'google-photos-picker', 'width=800,height=600');
         
         if (!pickerWindow) {
-          alert('Please allow popups for this site to select photos');
+          info('Please allow popups for this site to select photos', '🔔');
           setIsSelectingPhotos(false);
           return;
         }
-
-        // Poll for completion
-        const pollInterval = setInterval(async () => {
-          try {
-            const isComplete = await checkPickerSession(token, sessionId);
-            
-            if (isComplete) {
-              clearInterval(pollInterval);
-              
-              // Try to close the popup
-              try {
-                pickerWindow.close();
-              } catch (e) {
-                // Ignore popup close errors due to CORS policies
-              }
-              
-              // Try to focus the parent window
-              try {
-                window.focus();
-              } catch (e) {
-                // Ignore focus errors
-              }
-              
-              // Get the selected media items
-              const mediaItems = await getPickerMediaItems(token, sessionId);
-              
-              setScreensaverPhotos(mediaItems);
-              
-              // Save to localStorage
-              localStorage.setItem('screensaverPhotos', JSON.stringify(mediaItems));
-              localStorage.setItem('screensaverPhotosTimestamp', new Date().toISOString());
-              
-              setIsSelectingPhotos(false);
-              alert(`Selected ${mediaItems.length} photos for screensaver! You can now close the picker window.`);
-            }
-          } catch (error) {
-            console.error('Error checking picker session:', error);
-            clearInterval(pollInterval);
-            setIsSelectingPhotos(false);
-          }
-        }, 2000); // Check every 2 seconds
-
-        // Cleanup after 5 minutes
+        
+        // Add a small delay to let the window fully load
+        console.log('Picker window opened, waiting for it to load...');
         setTimeout(() => {
-          clearInterval(pollInterval);
-          if (pickerWindow && !pickerWindow.closed) {
-            pickerWindow.close();
+          console.log('Picker window should be loaded now');
+        }, 1000);
+        
+        // Add a helpful message for the user
+        console.log('You can now select photos in the picker window. The system will automatically detect when you\'re done.');
+
+        // Use the improved picker completion handler
+        waitForPickerCompletion(
+          token,
+          sessionId,
+          pickerWindow,
+          (mediaItems) => {
+            // Success callback
+            setScreensaverPhotos(mediaItems);
+            
+            // Save to localStorage
+            localStorage.setItem('screensaverPhotos', JSON.stringify(mediaItems));
+            localStorage.setItem('screensaverPhotosTimestamp', new Date().toISOString());
+            
+            setIsSelectingPhotos(false);
+            
+            if (mediaItems.length > 0) {
+              success(`Selected ${mediaItems.length} photos for screensaver!`, '📸');
+            } else {
+              info('No photos were selected. You can try again or use sample photos.', 'ℹ️');
+            }
+          },
+          (error) => {
+            // Error callback
+            console.error('Picker completion error:', error);
+            setIsSelectingPhotos(false);
+            showError(error.message);
+          },
+          {
+            pollInterval: 1500, // Check every 1.5 seconds (more responsive)
+            maxPolls: 80, // 2 minutes max
+            checkWindowClosed: false // Disabled - too aggressive and interferes with photo selection
           }
-          setIsSelectingPhotos(false);
-        }, 300000); // 5 minutes
+        );
 
       } catch (error) {
         console.error('Error creating picker session:', error);
-        alert('Failed to open photo picker. Please try again.');
+        showError('Failed to open photo picker. Please try again.');
         setIsSelectingPhotos(false);
       }
     } catch (error) {
       console.error('Failed to get Google Photos token:', error);
-      alert('Please connect to Google Photos first');
+      info('Please connect to Google Photos first', '🔗');
     }
   };
 
@@ -693,145 +702,6 @@ export const SettingsView = () => {
           </div>
         </div>
 
-        {/* Family Members */}
-        <div className="rounded-3xl p-6 bg-white border border-gray-light relative">
-          {isActuallySwitching && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex items-center justify-center z-10">
-              <div className="text-center">
-                <div className="w-8 h-8 border-2 border-purple border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <p className="text-sm text-gray-medium">Switching families...</p>
-              </div>
-            </div>
-          )}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-3xl font-black text-charcoal">
-                Family Members
-              </h2>
-              {currentHouseholdId === 'demo-family-001' && (
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="px-2 py-1 bg-yellow/20 text-yellow text-xs font-semibold rounded-full">
-                    DEMO MODE
-                  </span>
-                  <span className="text-xs text-gray-medium">Showing demo family data</span>
-                </div>
-              )}
-            </div>
-            {currentHouseholdId !== 'demo-family-001' && (
-              <button
-                onClick={handleAddUser}
-                className="px-4 py-2 rounded-xl bg-purple text-cream font-bold hover:bg-purple/90 transition-colors"
-              >
-                + Add Member
-              </button>
-            )}
-          </div>
-          <div className="space-y-3">
-            {/* Family Summary */}
-            {/* {!usersLoading && !isSwitching && displayUsers && displayUsers.length > 0 && (
-              <div className="p-4 rounded-xl bg-purple/10 border border-purple/20 mb-4">
-                <h3 className="font-semibold text-charcoal text-sm mb-2">Family Summary</h3>
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <div className="text-gray-medium">Total Members</div>
-                    <div className="font-bold text-charcoal text-lg">{displayUsers.length}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-medium">Parents</div>
-                    <div className="font-bold text-charcoal text-lg">{displayUsers.filter((u: User) => u.role === 'parent').length}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-medium">Children</div>
-                    <div className="font-bold text-charcoal text-lg">{displayUsers.filter((u: User) => u.role === 'child').length}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-medium">Total Kudos</div>
-                    <div className="font-bold text-charcoal text-lg">{displayUsers.reduce((sum: number, u: User) => sum + u.kudosReceived, 0)}</div>
-                  </div>
-                </div>
-              </div>
-            )} */}
-
-            {/* Loading State */}
-            {isActuallySwitching && (
-              <div className="p-8 rounded-xl bg-gray-light/30 border border-gray-light text-center">
-                <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-gray-medium">
-                  Loading family members...
-                </p>
-              </div>
-            )}
-
-            {/* Empty State */}
-            {!isActuallySwitching && displayUsers && displayUsers.length === 0 && (
-              <div className="p-8 rounded-xl bg-gray-light/30 border border-gray-light text-center">
-                <div className="w-16 h-16 bg-purple/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">👥</span>
-                </div>
-                <h3 className="text-lg font-bold text-charcoal mb-2">No Family Members Yet</h3>
-                <p className="text-gray-medium mb-4">
-                  {currentHouseholdId === 'demo-family-001' 
-                    ? 'This is demo mode - switch to your real family to add members'
-                    : 'Add your first family member to get started with KitchenSync!'
-                  }
-                </p>
-                {currentHouseholdId !== 'demo-family-001' && (
-                  <button
-                    onClick={handleAddUser}
-                    className="px-6 py-3 rounded-xl bg-purple text-cream font-bold hover:bg-purple/90 transition-colors"
-                  >
-                    + Add First Member
-                  </button>
-                )}
-              </div>
-            )}
-            
-            {!isActuallySwitching && displayUsers?.map((user: User) => (
-              <div
-                key={user.id}
-                className="flex items-center gap-4 p-4 rounded-xl"
-              >
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-black"
-                  style={{ backgroundColor: user.color, color: user.textColor }}
-                >
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-charcoal">
-                    {user.name}
-                  </h3>
-                  <p className="text-sm text-gray-medium capitalize">
-                    {user.role}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right mr-4">
-                    <div className="text-sm font-bold text-charcoal">
-                      {user.currentStreak} day streak
-                    </div>
-                    <div className="text-xs text-gray-medium">
-                      {user.kudosReceived} kudos
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleEditUser(user)}
-                    className="px-3 py-1 rounded-lg bg-gray-light text-charcoal text-sm font-semibold hover:bg-gray-medium"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteUser(user.id)}
-                    className="px-3 py-1 rounded-lg bg-red text-cream text-sm font-semibold hover:bg-red/90"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Household Settings */}
         <div className="rounded-3xl p-6 bg-white border border-gray-light">
           <h2 className="text-3xl font-black text-charcoal mb-6">
@@ -900,6 +770,27 @@ export const SettingsView = () => {
                 <p className="text-sm text-gray-medium">When tasks reset</p>
               </div>
               <span className="font-bold text-charcoal">6:00 AM</span>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl">
+              <div>
+                <h3 className="font-bold text-charcoal">Theme</h3>
+                <p className="text-sm text-gray-medium">
+                  {theme === 'inherit' 
+                    ? `Inherit system (${resolvedTheme})` 
+                    : `Manual (${theme})`
+                  }
+                </p>
+              </div>
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as ThemeMode)}
+                className="px-3 py-2 rounded-lg bg-gray-light text-charcoal font-bold border border-gray-medium focus:outline-none focus:ring-2 focus:ring-purple/20"
+              >
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="inherit">Inherit System</option>
+              </select>
             </div>
 
             <div className="p-4 rounded-xl">
@@ -1133,26 +1024,37 @@ export const SettingsView = () => {
                   {photosConnected ? 'Syncing ✓' : 'Screensaver photos'}
                 </p>
               </div>
-              {photosConnected ? (
-                <button
-                  onClick={handleDisconnectGooglePhotos}
-                  className="px-4 py-2 rounded-lg font-semibold transition-all bg-red text-cream hover:bg-charcoal/90"
-                >
-                  Disconnect
-                </button>
-              ) : (
-                <button
-                  onClick={handleConnectGooglePhotos}
-                  disabled={isConnecting}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    isConnecting
-                      ? 'bg-gray-light text-gray-medium cursor-not-allowed'
-                      : 'bg-purple text-cream hover:bg-purple/90'
-                  }`}
-                >
-                  {isConnecting ? 'Connecting...' : 'Connect'}
-                </button>
-              )}
+              <div className="flex gap-2">
+                {photosConnected ? (
+                  <button
+                    onClick={handleDisconnectGooglePhotos}
+                    className="px-4 py-2 rounded-lg font-semibold transition-all bg-red text-cream hover:bg-charcoal/90"
+                  >
+                    Disconnect
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnectGooglePhotos}
+                    disabled={isConnecting}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      isConnecting
+                        ? 'bg-gray-light text-gray-medium cursor-not-allowed'
+                        : 'bg-purple text-cream hover:bg-purple/90'
+                    }`}
+                  >
+                    {isConnecting ? 'Connecting...' : 'Connect'}
+                  </button>
+                )}
+                
+                {photosConnected && (
+                  <button
+                    onClick={debugGooglePhotosAPI}
+                    className="px-3 py-2 rounded-lg font-semibold transition-all bg-gray-light text-charcoal hover:bg-gray-medium text-sm"
+                  >
+                    Debug
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Screensaver Configuration */}
@@ -1199,6 +1101,148 @@ export const SettingsView = () => {
             </button>
           </div>
         </div>
+
+
+        {/* Family Members */}
+        <div className="rounded-3xl p-6 bg-white border border-gray-light relative">
+          {isActuallySwitching && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex items-center justify-center z-10">
+              <div className="text-center">
+                <div className="w-8 h-8 border-2 border-purple border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-sm text-gray-medium">Switching families...</p>
+              </div>
+            </div>
+          )}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-3xl font-black text-charcoal">
+                Family Members
+              </h2>
+              {currentHouseholdId === 'demo-family-001' && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="px-2 py-1 bg-yellow/20 text-yellow text-xs font-semibold rounded-full">
+                    DEMO MODE
+                  </span>
+                  <span className="text-xs text-gray-medium">Showing demo family data</span>
+                </div>
+              )}
+            </div>
+            {currentHouseholdId !== 'demo-family-001' && (
+              <button
+                onClick={handleAddUser}
+                className="px-4 py-2 rounded-xl bg-purple text-cream font-bold hover:bg-purple/90 transition-colors"
+              >
+                + Add Member
+              </button>
+            )}
+          </div>
+          <div className="space-y-3">
+            {/* Family Summary */}
+            {/* {!usersLoading && !isSwitching && displayUsers && displayUsers.length > 0 && (
+              <div className="p-4 rounded-xl bg-purple/10 border border-purple/20 mb-4">
+                <h3 className="font-semibold text-charcoal text-sm mb-2">Family Summary</h3>
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <div className="text-gray-medium">Total Members</div>
+                    <div className="font-bold text-charcoal text-lg">{displayUsers.length}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-medium">Parents</div>
+                    <div className="font-bold text-charcoal text-lg">{displayUsers.filter((u: User) => u.role === 'parent').length}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-medium">Children</div>
+                    <div className="font-bold text-charcoal text-lg">{displayUsers.filter((u: User) => u.role === 'child').length}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-medium">Total Kudos</div>
+                    <div className="font-bold text-charcoal text-lg">{displayUsers.reduce((sum: number, u: User) => sum + u.kudosReceived, 0)}</div>
+                  </div>
+                </div>
+              </div>
+            )} */}
+
+            {/* Loading State */}
+            {isActuallySwitching && (
+              <div className="p-8 rounded-xl bg-gray-light/30 border border-gray-light text-center">
+                <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-medium">
+                  Loading family members...
+                </p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isActuallySwitching && displayUsers && displayUsers.length === 0 && (
+              <div className="p-8 rounded-xl bg-gray-light/30 border border-gray-light text-center">
+                <div className="w-16 h-16 bg-purple/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">👥</span>
+                </div>
+                <h3 className="text-lg font-bold text-charcoal mb-2">No Family Members Yet</h3>
+                <p className="text-gray-medium mb-4">
+                  {currentHouseholdId === 'demo-family-001' 
+                    ? 'This is demo mode - switch to your real family to add members'
+                    : 'Add your first family member to get started with KitchenSync!'
+                  }
+                </p>
+                {currentHouseholdId !== 'demo-family-001' && (
+                  <button
+                    onClick={handleAddUser}
+                    className="px-6 py-3 rounded-xl bg-purple text-cream font-bold hover:bg-purple/90 transition-colors"
+                  >
+                    + Add First Member
+                  </button>
+                )}
+              </div>
+            )}
+            
+            {!isActuallySwitching && displayUsers?.map((user: User) => (
+              <div
+                key={user.id}
+                className="flex items-center gap-4 p-4 rounded-xl"
+              >
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-black"
+                  style={{ backgroundColor: user.color, color: user.textColor }}
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-charcoal">
+                    {user.name}
+                  </h3>
+                  <p className="text-sm text-gray-medium capitalize">
+                    {user.role}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right mr-4">
+                    <div className="text-sm font-bold text-charcoal">
+                      {user.currentStreak} day streak
+                    </div>
+                    <div className="text-xs text-gray-medium">
+                      {user.kudosReceived} kudos
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleEditUser(user)}
+                    className="px-3 py-1 rounded-lg bg-gray-light text-charcoal text-sm font-semibold hover:bg-gray-medium"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUser(user.id)}
+                    className="px-3 py-1 rounded-lg bg-red text-cream text-sm font-semibold hover:bg-red/90"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        
 
         {/* About - spans 2 columns */}
         <div className="lg:col-span-2 text-center rounded-3xl p-6">

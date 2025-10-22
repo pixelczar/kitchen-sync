@@ -20,8 +20,8 @@ export const PersonCard = ({ user, tasks, kudosCount, onAddTask }: PersonCardPro
           onClick={onAddTask}
           className="absolute top-4 right-4 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl font-bold transition-transform hover:scale-110 active:scale-95"
           style={{ 
-            backgroundColor: 'rgba(0, 0, 0, 0.2)',
-            color: user.textColor 
+            backgroundColor: user.color === '#F7EA31' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.1)',
+            color: user.color === '#F7EA31' ? '#3C0E4D' : user.textColor 
           }}
         >
           +

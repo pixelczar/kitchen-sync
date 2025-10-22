@@ -5,12 +5,9 @@ export const useWeather = () => {
   return useQuery({
     queryKey: ['weather'],
     queryFn: async () => {
-      console.log('🌤️ Fetching weather data...');
       try {
         const location = await getUserLocation();
-        console.log('🌤️ Location obtained:', location);
         const weather = await fetchCurrentWeather(location.lat, location.lon);
-        console.log('🌤️ Weather data fetched:', weather);
         return { weather, location };
       } catch (error) {
         console.error('🌤️ Weather fetch error:', error);

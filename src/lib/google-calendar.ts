@@ -52,6 +52,7 @@ export const authorizeGoogleCalendar = async (): Promise<string> => {
 
   // Store state for verification
   sessionStorage.setItem('googleCalendarState', state);
+  console.log('Stored Google Calendar state:', state);
 
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${GOOGLE_CALENDAR_CLIENT_ID}&` +

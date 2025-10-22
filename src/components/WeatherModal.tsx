@@ -19,6 +19,10 @@ export const WeatherModal = ({ isOpen, onClose }: WeatherModalProps) => {
 
   if (!currentData) return null;
 
+  // Filter forecast to start from today
+  const today = new Date().toISOString().split('T')[0];
+  const filteredForecast = forecast?.filter(day => day.date >= today).slice(0, 5) || [];
+
   const { weather } = currentData;
   const mainWeatherIcon = getMeteoconsIcon(weather.icon);
 
@@ -30,7 +34,9 @@ export const WeatherModal = ({ isOpen, onClose }: WeatherModalProps) => {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    // Parse the date string in local timezone to avoid UTC offset issues
+    const date = new Date(dateStr + 'T12:00:00');
+    return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -123,7 +129,7 @@ export const WeatherModal = ({ isOpen, onClose }: WeatherModalProps) => {
                   <div className="text-white/70 text-center py-12">Loading forecast...</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    {forecast?.map((day, index) => {
+                    {filteredForecast.map((day, index) => {
                       const meteoconsIcon = getMeteoconsIcon(day.icon);
                       return (
                         <motion.div
@@ -139,7 +145,10 @@ export const WeatherModal = ({ isOpen, onClose }: WeatherModalProps) => {
                             alt={day.description}
                             className="w-20 h-20 mx-auto mb-3"
                           />
-                          <div className="text-white text-3xl font-black mb-2">{day.temp}°</div>
+                          <div className="text-white text-3xl font-black mb-1">{day.tempMax}°</div>
+                          <div className="text-white/80 text-lg font-semibold mb-2">
+                            {day.tempMax}°/{day.tempMin}°
+                          </div>
                           <div className="text-white/70 text-sm capitalize mb-3">{day.description}</div>
                           <div className="flex items-center justify-center gap-4 text-white/60 text-sm">
                             <span>💧 {day.pop}%</span>

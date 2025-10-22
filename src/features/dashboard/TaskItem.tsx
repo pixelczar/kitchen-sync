@@ -23,8 +23,19 @@ export const TaskItem = ({ task, textColor }: TaskItemProps) => {
     : task.completed; // Otherwise use Firestore state
   
   const handleToggle = () => {
-    console.log('TaskItem handleToggle:', { taskId: task.id, currentState: isCompleted, newState: !isCompleted }); // Debug log
-    updateTask({ taskId: task.id, completed: !isCompleted });
+    // Always use the original Firestore state to determine the next state
+    // This prevents double-click issues with optimistic updates
+    const originalCompleted = task.completed;
+    const newCompleted = !originalCompleted;
+    
+    console.log('TaskItem handleToggle:', { 
+      taskId: task.id, 
+      originalState: originalCompleted, 
+      optimisticState: optimisticTaskStates.get(task.id),
+      newState: newCompleted 
+    }); // Debug log
+    
+    updateTask({ taskId: task.id, completed: newCompleted });
     
     // Blast emojis when completing a task! 🎉
     if (!isCompleted) {

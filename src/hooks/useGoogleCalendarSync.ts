@@ -16,7 +16,6 @@ export const useGoogleCalendarSync = () => {
     try {
       // Skip sync for Demo family - they have their own demo data
       if (currentHouseholdId === 'demo-family-001') {
-        console.log('Skipping Google Calendar sync for Demo family');
         return;
       }
 
@@ -32,7 +31,6 @@ export const useGoogleCalendarSync = () => {
       }
 
       if (!currentHouseholdId) {
-        console.log('No current household ID found');
         return;
       }
 
@@ -51,7 +49,6 @@ export const useGoogleCalendarSync = () => {
         // Use the first user as the primary user for sync
         const primaryUser = users[0];
         
-        console.log('Sync using household ID:', currentHouseholdId);
         console.log('Primary user:', primaryUser);
         
         // Get selected calendar IDs from localStorage (family-specific) or use primary
@@ -59,7 +56,6 @@ export const useGoogleCalendarSync = () => {
         const savedCalendarIds = localStorage.getItem(familyCalendarKey);
         const selectedCalendarIds = savedCalendarIds ? JSON.parse(savedCalendarIds) : ['primary'];
         
-        console.log('Using calendar selection for family:', currentHouseholdId, selectedCalendarIds);
         
         // Fetch events from all selected calendars
         const allEvents = [];
@@ -180,11 +176,9 @@ export const useGoogleCalendarSync = () => {
       const oneHour = 60 * 60 * 1000;
       
       if (lastSync && (now - parseInt(lastSync)) < oneHour) {
-        console.log('Google Calendar sync skipped - synced recently for family', currentHouseholdId, 'last sync:', new Date(parseInt(lastSync)).toLocaleString());
         return;
       }
       
-      console.log('Google Calendar sync will proceed for family', currentHouseholdId, 'last sync was:', lastSync ? new Date(parseInt(lastSync)).toLocaleString() : 'never');
 
         // Initial sync after a short delay to ensure app is loaded
         const initialSyncTimeout = setTimeout(() => {

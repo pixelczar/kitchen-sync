@@ -85,29 +85,24 @@ export const useUsers = () => {
   const query = useQuery<User[], Error>({
     queryKey: ['users', currentHouseholdId],
     queryFn: async () => {
-      console.log('🔥 useUsers queryFn called for household:', currentHouseholdId);
       
       if (!currentHouseholdId) {
-        console.log('❌ No household ID, returning empty array');
         return [];
       }
       
       // Demo mode - return demo data immediately
       if (currentHouseholdId === DEMO_HOUSEHOLD_ID) {
-        console.log('🎭 Demo mode, returning stub data');
         return getStubUsers(currentHouseholdId);
       }
       
       
       // Query for the specific household
-      console.log('🗄️ Querying database for household:', currentHouseholdId);
       const q = firestoreQuery(
         collection(firestore, 'users'),
         where('householdId', '==', currentHouseholdId)
       );
       const snapshot = await getDocs(q);
       const users = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as User));
-      console.log('📊 Database returned users for', currentHouseholdId, ':', users.length, users.map(u => u.name));
       return users;
     },
     enabled: !!currentHouseholdId,

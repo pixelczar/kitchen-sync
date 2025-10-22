@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google Authentication</title>
+    
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -75,17 +81,21 @@
                 const expiresIn = hashParams.get('expires_in');
                 const scope = hashParams.get('scope');
                 
-                const storedState = sessionStorage.getItem('googlePhotosState') || sessionStorage.getItem('googleCalendarState');
+                const googlePhotosState = sessionStorage.getItem('googlePhotosState');
+                const googleCalendarState = sessionStorage.getItem('googleCalendarState');
+                const storedState = googlePhotosState || googleCalendarState;
                 
                 console.log('Authorization code:', code ? 'Present' : 'Missing');
                 console.log('Access token:', accessToken ? 'Present' : 'Missing');
                 console.log('Error:', error);
                 console.log('State:', state);
                 console.log('Stored state:', storedState);
+                console.log('Google Photos state:', googlePhotosState);
+                console.log('Google Calendar state:', googleCalendarState);
                 
                 // Determine which service we're authenticating for
-                const isGooglePhotos = sessionStorage.getItem('googlePhotosState') === state;
-                const isGoogleCalendar = sessionStorage.getItem('googleCalendarState') === state;
+                const isGooglePhotos = googlePhotosState === state;
+                const isGoogleCalendar = googleCalendarState === state;
                 const serviceName = isGooglePhotos ? 'Google Photos' : isGoogleCalendar ? 'Google Calendar' : 'Google';
                 
                 titleEl.textContent = `Connecting to ${serviceName}...`;
@@ -94,22 +104,56 @@
                     console.error('OAuth error:', error);
                     statusEl.textContent = 'Authentication failed: ' + error;
                     statusEl.className = 'error';
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 3000);
+                    
+                    // Send error message to parent window if in popup
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'GOOGLE_AUTH_ERROR',
+                            error: error
+                        }, window.location.origin);
+                        
+                        // Close the popup immediately after sending the message
+                        setTimeout(() => {
+                            window.close();
+                        }, 100);
+                    } else {
+                        // If not in popup, redirect to home
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 3000);
+                    }
                 } else if (accessToken) {
                     // Implicit flow - token is in URL fragment
                     console.log('Access token received via implicit flow');
                     statusEl.textContent = 'Processing access token...';
                     
-                    // Verify state parameter
-                    if (state !== storedState) {
+                    // Verify state parameter - check against both possible stored states
+                    const stateMatches = (state === googlePhotosState) || (state === googleCalendarState);
+                    if (!stateMatches) {
                         console.error('State mismatch');
+                        console.error('Received state:', state);
+                        console.error('Expected Google Photos state:', googlePhotosState);
+                        console.error('Expected Google Calendar state:', googleCalendarState);
                         statusEl.textContent = 'Authentication failed: Invalid state';
                         statusEl.className = 'error';
-                        setTimeout(() => {
-                            window.location.href = '/';
-                        }, 3000);
+                        
+                        // Send error message to parent window if in popup
+                        if (window.opener) {
+                            window.opener.postMessage({
+                                type: 'GOOGLE_AUTH_ERROR',
+                                error: 'Invalid state'
+                            }, window.location.origin);
+                            
+                            // Close the popup immediately after sending the message
+                            setTimeout(() => {
+                                window.close();
+                            }, 100);
+                        } else {
+                            // If not in popup, redirect to home
+                            setTimeout(() => {
+                                window.location.href = '/';
+                            }, 3000);
+                        }
                         return;
                     }
                     
@@ -121,16 +165,32 @@
                         scope: scope
                     };
                     
+                    // Determine the correct token key based on which state matched
                     const tokenKey = isGooglePhotos ? 'googlePhotosToken' : 'googleCalendarToken';
+                    console.log('Storing token with key:', tokenKey);
                     localStorage.setItem(tokenKey, JSON.stringify(tokenData));
                     console.log('Token stored:', tokenData);
                     
                     statusEl.textContent = `Successfully connected to ${serviceName}!`;
                     statusEl.className = 'success';
                     
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 2000);
+                    // Send success message to parent window if in popup
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'GOOGLE_AUTH_SUCCESS',
+                            accessToken: accessToken
+                        }, window.location.origin);
+                        
+                        // Close the popup immediately after sending the message
+                        setTimeout(() => {
+                            window.close();
+                        }, 100);
+                    } else {
+                        // If not in popup, redirect to home
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
+                    }
                     
                 } else if (code) {
                     // Authorization code flow

@@ -119,12 +119,12 @@ const NavItem = ({
 export const Navigation = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none">
-      <div className="max-w-3xl mx-auto px-8 pb-8 pt-6 pointer-events-auto">
+      <div className="max-w-2xl mx-auto px-8 pb-8 pt-6 pointer-events-auto">
         <div className="flex justify-around items-center will-change-auto">
           <NavItem to="/" Icon={LayoutDashboard} label="Dashboard" activeColor="bg-purple text-cream" />
           <NavItem to="/calendar" Icon={Calendar} label="Calendar" activeColor="bg-purple text-cream" showPlusButton={true} />
           <NavItem to="/todos" Icon={CheckSquare} label="Todos" activeColor="bg-purple text-cream" showPlusButton={true} />
-          <NavItem to="/settings" Icon={Settings} label="Settings" activeColor="bg-purple text-cream" />
+          {/* <NavItem to="/settings" Icon={Settings} label="Settings" activeColor="bg-purple text-cream" /> */}
         </div>
       </div>
     </nav>

@@ -63,7 +63,6 @@ export const useCurrentHousehold = () => {
     // Set switching state immediately
     setIsSwitching(true);
     
-    console.log('🔄 Starting household switch to:', householdId);
     
     // Update state FIRST - this will cause queries to refetch with new key
     setCurrentHouseholdId(householdId);
@@ -79,11 +78,9 @@ export const useCurrentHousehold = () => {
     if (householdId) {
       const familySyncKey = `lastGoogleCalendarSync_${householdId}`;
       localStorage.removeItem(familySyncKey);
-      console.log('🔄 Cleared sync timestamp for family:', householdId);
     }
 
     // Invalidate all relevant queries to force fresh data
-    console.log('🔄 Invalidating queries...');
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['users'], refetchType: 'active' }),
       queryClient.invalidateQueries({ queryKey: ['householdUserCounts'], refetchType: 'active' }),
@@ -110,7 +107,6 @@ export const useCurrentHousehold = () => {
       ]);
     }
     
-    console.log('✅ Household switch complete:', householdId);
     setIsSwitching(false);
   };
 

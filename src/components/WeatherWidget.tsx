@@ -12,15 +12,6 @@ export const WeatherWidget = ({ className = '' }: WeatherWidgetProps) => {
   const { data: forecastData, isLoading: forecastLoading, error: forecastError } = useWeatherForecast();
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Debug logging
-  console.log('🌤️ WeatherWidget render:', {
-    weatherData,
-    weatherLoading,
-    weatherError,
-    forecastData,
-    forecastLoading,
-    forecastError
-  });
 
   // Update time every minute
   useEffect(() => {
@@ -78,7 +69,8 @@ export const WeatherWidget = ({ className = '' }: WeatherWidgetProps) => {
 
   // Format date
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    // Parse the date string in local timezone to avoid UTC offset issues
+    const date = new Date(dateStr + 'T12:00:00');
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -222,7 +214,7 @@ export const WeatherWidget = ({ className = '' }: WeatherWidgetProps) => {
 
   return (
     <motion.div 
-      className={`rounded-3xl p-6 bg-white ${className}`}
+      className={`rounded-3xl p-6 bg-white h-full ${className}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 24 }}

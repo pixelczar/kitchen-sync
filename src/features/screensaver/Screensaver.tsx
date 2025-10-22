@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loadSelectedPhotos } from '../../lib/google-photos';
+import { useWeather } from '../../hooks/useWeather';
+import { getMeteoconsIcon } from '../../lib/weather';
 
 // Sample photos as fallback
 const SAMPLE_PHOTOS = [
@@ -21,6 +23,54 @@ export const Screensaver = ({ onWake }: ScreensaverProps) => {
   const [photos, setPhotos] = useState<string[]>(SAMPLE_PHOTOS);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
+  
+  // Weather data
+  const { data: weatherData, isLoading: weatherLoading, error: weatherError } = useWeather();
+  
+  // Simple weather icon component (no animations to avoid jank)
+  const WeatherIcon = ({ icon, size = 'w-12 h-12' }: { icon: string; size?: string }) => {
+    const iconName = getMeteoconsIcon(icon);
+    
+    return (
+      <div className={`${size} flex items-center justify-center`}>
+        <img
+          src={`/weather-icons/${iconName}.svg`}
+          alt={iconName}
+          className="w-full h-full object-contain"
+          onError={(e) => {
+            // Fallback to emoji if SVG not found
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            const parent = target.parentElement;
+            if (parent) {
+              parent.innerHTML = getWeatherEmoji(icon);
+            }
+          }}
+        />
+      </div>
+    );
+  };
+
+  // Fallback emoji function
+  const getWeatherEmoji = (icon: string): string => {
+    const code = icon.slice(0, 2);
+    const isNight = icon.endsWith('n');
+    
+    const emojiMap: Record<string, string> = {
+      '01': isNight ? '🌙' : '☀️',
+      '02': isNight ? '☁️' : '⛅',
+      '03': '☁️',
+      '04': '☁️',
+      '09': '🌧️',
+      '10': '🌦️',
+      '11': '⛈️',
+      '13': '❄️',
+      '50': '🌫️',
+    };
+    
+    return emojiMap[code] || '🌤️';
+  };
   
   // Load selected photos from Google Photos Picker
   const loadGooglePhotos = useCallback(async () => {
@@ -82,7 +132,7 @@ export const Screensaver = ({ onWake }: ScreensaverProps) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 1 }}
         >
-          {!isLoadingPhotos && photos.length > 0 && (
+          {!isLoadingPhotos && photos.length > 0 && !imageErrors.has(currentIndex) && (
             <motion.img
               src={photos[currentIndex]}
               alt="Family photo"
@@ -90,9 +140,74 @@ export const Screensaver = ({ onWake }: ScreensaverProps) => {
               initial={{ scale: 1 }}
               animate={{ scale: 1.1, x: -20, y: -10 }}
               transition={{ duration: 10, ease: 'linear' }}
+              onError={() => {
+                console.warn(`Failed to load image at index ${currentIndex}:`, photos[currentIndex]);
+                setImageErrors(prev => new Set([...prev, currentIndex]));
+                // Move to next image if current one fails
+                setCurrentIndex((prev) => (prev + 1) % photos.length);
+              }}
             />
           )}
           
+          {/* Fallback for failed images */}
+          {!isLoadingPhotos && photos.length > 0 && imageErrors.has(currentIndex) && (
+            <div className="w-full h-full bg-gradient-to-br from-purple to-blue flex items-center justify-center">
+              <div className="text-white text-center">
+                <div className="text-6xl mb-4">📸</div>
+                <div className="text-2xl font-semibold">Photo unavailable</div>
+                <div className="text-lg opacity-75 mt-2">CORS restrictions prevent display</div>
+              </div>
+            </div>
+          )}
+          
+          {/* Subtle black gradient from bottom for better visibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+          
+          {/* Weather Widget - Bottom Left */}
+          <motion.div 
+            className="absolute bottom-4 left-2 text-white"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 2.4, duration: 0.8, ease: "circInOut" }}
+          >
+            {!weatherLoading && !weatherError && weatherData && (
+              <div className="flex items-center gap-4">
+                <WeatherIcon icon={weatherData.weather.icon} size="w-40 h-40" />
+                <div>
+                  <div className="text-8xl font-bold text-white tracking-tighter">
+                    {weatherData.weather.temp}°
+                  </div>
+                  <div className="text-4xl text-white/80 tracking-tight capitalize">
+                    {weatherData.weather.description}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Weather loading state */}
+            {weatherLoading && (
+              <div className="flex items-center gap-6">
+                <div className="w-24 h-24 bg-white/20 rounded-full animate-pulse" />
+                <div>
+                  <div className="h-12 w-20 bg-white/20 rounded animate-pulse mb-2" />
+                  <div className="h-6 w-32 bg-white/20 rounded animate-pulse" />
+                </div>
+              </div>
+            )}
+            
+            {/* Weather error state */}
+            {weatherError && (
+              <div className="flex items-center gap-6">
+                <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-4xl">🌤️</span>
+                </div>
+                <div>
+                  <div className="text-2xl text-white/80">Weather unavailable</div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+
           {/* Time and Date Display */}
           <motion.div 
             className="absolute bottom-4 right-8 text-white text-right"
@@ -110,7 +225,7 @@ export const Screensaver = ({ onWake }: ScreensaverProps) => {
               })}
             </motion.div>
             <motion.div 
-              className="text-[128px] font-extrabold text-yellow tracking-tighter leading-none"
+              className="text-9xl font-extrabold text-yellow tracking-tighter leading-none"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2.3, duration: 0.8, ease: "circInOut" }}

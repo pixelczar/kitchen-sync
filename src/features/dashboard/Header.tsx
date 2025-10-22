@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useWeather } from '../../hooks/useWeather';
 import { getMeteoconsIcon } from '../../lib/weather';
@@ -7,6 +8,7 @@ import { WeatherModal } from '../../components/WeatherModal';
 import { useCurrentHousehold } from '../../hooks/useCurrentHousehold';
 
 export const Header = () => {
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const { data: weatherData, isLoading } = useWeather();
@@ -77,7 +79,11 @@ export const Header = () => {
       <div className="flex items-center justify-between w-full max-w-full">
         {/* Logo and Breadcrumb */}
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-black text-charcoal tracking-tight">
+          <h1
+            className="text-3xl font-black text-charcoal tracking-tight cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate('/settings')}
+            title="Open settings"
+          >
             {currentHousehold?.name || 'KS'}
           </h1>
           <Breadcrumb />

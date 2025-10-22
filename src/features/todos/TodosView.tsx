@@ -159,16 +159,22 @@ export const TodosView = () => {
   const sharedTodos = tasks.filter(task => task.type === 'todo');
   
   const handleToggleTodo = (todo: typeof sharedTodos[0], checkmarkRef?: React.RefObject<HTMLDivElement>) => {
-    // Get current state (considering optimistic updates)
-    const isCurrentlyCompleted = optimisticTaskStates.has(todo.id)
-      ? optimisticTaskStates.get(todo.id)!
-      : todo.completed;
+    // Always use the original Firestore state to determine the next state
+    // This prevents double-click issues with optimistic updates
+    const originalCompleted = todo.completed;
+    const newCompleted = !originalCompleted;
     
-    console.log('handleToggleTodo:', { todoId: todo.id, currentState: isCurrentlyCompleted, newState: !isCurrentlyCompleted }); // Debug log
-    updateTask({ taskId: todo.id, completed: !isCurrentlyCompleted });
+    console.log('handleToggleTodo:', { 
+      todoId: todo.id, 
+      originalState: originalCompleted, 
+      optimisticState: optimisticTaskStates.get(todo.id),
+      newState: newCompleted 
+    }); // Debug log
+    
+    updateTask({ taskId: todo.id, completed: newCompleted });
     
     // Blast emojis when completing a todo! 🎉
-    if (!isCurrentlyCompleted && checkmarkRef?.current) {
+    if (!originalCompleted && checkmarkRef?.current) {
       blastComplete(checkmarkRef.current);
     }
   };

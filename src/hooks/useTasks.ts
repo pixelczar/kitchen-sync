@@ -91,7 +91,6 @@ export const useTasks = () => {
     queryFn: async () => {
       try {
         if (!currentHouseholdId) {
-          console.log('No current household ID, returning empty array');
           return [];
         }
 
@@ -144,14 +143,13 @@ export const useTaskMutations = () => {
       // 1. Optimistic update in Zustand (instant UI)
       setOptimisticTaskState(taskId, completed);
       
-      // 2. Queue Firestore write (batched, 500ms delay)
-      queueFirestoreWrite(async () => {
-        const taskRef = doc(firestore, 'tasks', taskId);
-        await updateDoc(taskRef, {
-          completed,
-          completedAt: completed ? new Date().toISOString() : null,
-          updatedAt: new Date().toISOString(),
-        });
+      // 2. Execute Firestore write immediately (no batching for checkbox toggles)
+      // This ensures the mutation only succeeds when the write actually completes
+      const taskRef = doc(firestore, 'tasks', taskId);
+      await updateDoc(taskRef, {
+        completed,
+        completedAt: completed ? new Date().toISOString() : null,
+        updatedAt: new Date().toISOString(),
       });
       
       return { taskId, completed };

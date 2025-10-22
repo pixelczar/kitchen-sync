@@ -46,23 +46,6 @@
   //     ]
   //   },
   // ]
-  "indexes": [
-    {
-      "collectionGroup": "calendar-events",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "householdId", "order": "ASCENDING" },
-        { "fieldPath": "startTime", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "calendar-events",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "householdId", "order": "ASCENDING" },
-        { "fieldPath": "externalId", "order": "ASCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

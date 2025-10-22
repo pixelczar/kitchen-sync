@@ -3,7 +3,6 @@ import { Calendar, momentLocalizer, Views, View } from 'react-big-calendar';
 import moment from 'moment';
 import { CalendarEventModal } from '../../components/CalendarEventModal';
 import { EventDetailsModal } from '../../components/EventDetailsModal';
-import { useGoogleCalendarSync } from '../../hooks/useGoogleCalendarSync';
 import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent } from '../../hooks/useCalendarEvents';
 import { 
   toBigCalendarEvents, 
@@ -29,22 +28,52 @@ interface CustomWeekViewProps {
 
 const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: CustomWeekViewProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [calendarHeight, setCalendarHeight] = useState(800);
   const timeGridRef = useRef<HTMLDivElement>(null);
+  const calendarContainerRef = useRef<HTMLDivElement>(null);
   
-  // Calculate current time position
-  const getCurrentTimePosition = () => {
-    const now = currentTime;
+  // Calculate current time position based on actual current time
+  const getCurrentTimePosition = useCallback(() => {
+    const now = new Date();
     const hour = now.getHours();
     const minute = now.getMinutes();
+    
+    // Calculate position based on time slots (6 AM to 11 PM = 18 hours)
     const totalMinutes = hour * 60 + minute;
+    const startMinutes = 6 * 60; // 6 AM in minutes
+    const adjustedMinutes = totalMinutes - startMinutes;
     
-    // Calculate position (6am = 0, so subtract 6*60 = 360 minutes)
-    const adjustedMinutes = totalMinutes - (6 * 60);
-    const position = (adjustedMinutes / 60) * 64; // 64px per hour
+    // Each hour slot is 64px high, so calculate position
+    const positionInPixels = (adjustedMinutes / 60) * 64;
     
-    return Math.max(0, position);
-  };
+    // Ensure position is within visible range (6 AM to 11 PM)
+    return Math.max(0, Math.min(positionInPixels, 18 * 64));
+  }, []);
   
+  // Calculate calendar height based on viewport
+  const calculateCalendarHeight = useCallback(() => {
+    const viewportHeight = window.innerHeight;
+    const headerHeight = 200; // Approximate header height
+    const bottomNavHeight = 100; // Bottom navigation height
+    const padding = 20; // Small padding
+    const availableHeight = viewportHeight - headerHeight - bottomNavHeight - padding;
+    return Math.max(600, availableHeight); // Minimum 600px height
+  }, []);
+
+  // Update calendar height on mount and resize
+  useEffect(() => {
+    const updateHeight = () => {
+      setCalendarHeight(calculateCalendarHeight());
+    };
+    
+    // Initial height calculation
+    updateHeight();
+    
+    // Update on resize
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, [calculateCalendarHeight]);
+
   // Update current time every 30 minutes and auto-scroll to center current time
   useEffect(() => {
     const updateTimeAndScroll = () => {
@@ -55,7 +84,8 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
       if (timeGridRef.current) {
         const currentTimePosition = getCurrentTimePosition();
         const containerHeight = timeGridRef.current.clientHeight;
-        const scrollPosition = Math.max(0, currentTimePosition - (containerHeight / 2));
+        // Position current time at 25% down the view instead of center
+        const scrollPosition = Math.max(0, currentTimePosition - (containerHeight * 0.25));
         
         timeGridRef.current.scrollTo({
           top: scrollPosition,
@@ -70,7 +100,7 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
     // Update every 30 minutes (1800000 ms)
     const interval = setInterval(updateTimeAndScroll, 1800000);
     return () => clearInterval(interval);
-  }, []);
+  }, [getCurrentTimePosition]);
 
   // Get 4 days starting from currentDate
   const getWeekDays = () => {
@@ -169,6 +199,42 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
     return getEventsForDay(day).filter(event => !event.allDay);
   };
 
+  // Detect overlapping events and calculate their positions
+  const getOverlappingEvents = (events: BigCalendarEvent[]) => {
+    if (events.length === 0) return [];
+    
+    // Sort events by start time
+    const sortedEvents = [...events].sort((a, b) => 
+      new Date(a.start).getTime() - new Date(b.start).getTime()
+    );
+    
+    const eventGroups: BigCalendarEvent[][] = [];
+    let currentGroup: BigCalendarEvent[] = [sortedEvents[0]];
+    
+    for (let i = 1; i < sortedEvents.length; i++) {
+      const currentEvent = sortedEvents[i];
+      const lastEventInGroup = currentGroup[currentGroup.length - 1];
+      
+      // Check if current event overlaps with any event in current group
+      const currentStart = new Date(currentEvent.start).getTime();
+      const lastEnd = new Date(lastEventInGroup.end).getTime();
+      
+      if (currentStart < lastEnd) {
+        // Events overlap, add to current group
+        currentGroup.push(currentEvent);
+      } else {
+        // No overlap, start new group
+        eventGroups.push([...currentGroup]);
+        currentGroup = [currentEvent];
+      }
+    }
+    
+    // Add the last group
+    eventGroups.push(currentGroup);
+    
+    return eventGroups;
+  };
+
   // Check if current time is within visible range
   const isCurrentTimeVisible = () => {
     const now = currentTime;
@@ -184,26 +250,32 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
 
 
   return (
-    <div className="flex flex-col h-[800px] custom-week-view">
+    <div 
+      ref={calendarContainerRef}
+      className="flex flex-col custom-week-view w-full max-w-full"
+      style={{ height: `${calendarHeight}px` }}
+    >
       {/* Day Headers */}
       <div className="flex border-b-2 border-gray-200">
-        <div className="w-16 border-r border-gray-200 bg-gray-50"></div>
+        <div className="w-16 border-r border-gray-200 bg-gray-50 flex-shrink-0"></div>
         {weekDays.map((day, index) => (
           <div 
             key={index}
-            className={`flex-1 p-4 text-center border-r border-gray-200 ${
+            className={`flex-1 p-4 text-center border-r border-gray-200 min-w-0 ${
               isToday(day) ? 'bg-yellow-100' : 'bg-gray-50'
             }`}
           >
-            <div className="text-sm font-semibold text-gray-600">
-              {day.toLocaleDateString('en-US', { weekday: 'short' })}
-            </div>
-            <div className={`text-2xl font-bold ${isToday(day) ? 'text-gray-900' : 'text-gray-700'}`}>
-              {day.getDate()}
+            <div className="flex items-center gap-2">
+              <div className="text-2xl font-bold text-charcoal tracking-tight">
+                {day.toLocaleDateString('en-US', { weekday: 'short' })}
+              </div>
+              <div className={`text-2xl font-regular tracking-tighter ${isToday(day) ? 'text-gray-900' : 'text-gray-700'}`}>
+                {day.getDate()}
+              </div>
             </div>
             
             {/* All-Day Events */}
-            <div className="mt-1 flex flex-wrap gap-0.5">
+            <div className="mt-1 flex flex-wrap gap-2">
               {getAllDayEventsForDay(day).map((event) => (
                 <div
                   key={event.id}
@@ -212,7 +284,7 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
                   style={{ 
                     backgroundColor: `${getEventColor(event)}1A`, // 10% alpha
                     color: darkenColor(getEventColor(event), 30), // Darken text by 30%
-                    fontSize: '1.0vw',
+                    fontSize: '1.2vw',
                     flex: '0 0 auto',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -232,9 +304,9 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
       </div>
 
       {/* Time Grid */}
-      <div ref={timeGridRef} className="flex flex-1 overflow-y-auto">
+      <div ref={timeGridRef} className="flex flex-1 overflow-y-auto overflow-x-hidden">
         {/* Time Labels */}
-        <div className="w-16 bg-gray-50 border-r border-gray-200 flex-shrink-0">
+        <div className="w-16 bg-gray-50 border-r border-gray-200 flex-shrink-0 min-w-16">
           {timeSlots.map(hour => (
             <div key={hour} className="h-16 border-b border-gray-200 flex items-center justify-center">
               <span className="text-xs font-semibold text-gray-600">
@@ -250,7 +322,7 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
           const isTodayColumn = isToday(day);
           
           return (
-            <div key={dayIndex} className="flex-1 border-r border-gray-200 relative">
+            <div key={dayIndex} className="flex-1 border-r border-gray-200 relative min-w-0 p-1">
               {/* Time Slots Container */}
               <div className="relative" style={{ height: `${timeSlots.length * 64}px` }}>
                 {timeSlots.map((hour, hourIndex) => (
@@ -275,45 +347,59 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
                   />
                 ))}
 
-              {/* Timed Events */}
-              {timedEvents.map((event) => {
-                const start = new Date(event.start);
-                const end = new Date(event.end);
-                const startHour = start.getHours();
-                const startMinute = start.getMinutes();
-                const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60); // hours
-                
-                const top = ((startHour - 6) * 64) + (startMinute / 60 * 64);
-                const height = Math.max(duration * 64, 40);
-                
-                return (
-                  <div
-                    key={event.id}
-                    onClick={() => onSelectEvent(event)}
-                    className="absolute left-1 right-1 rounded-lg px-2 py-1 cursor-pointer shadow-sm tracking-tight"
-                    style={{
-                      top: `${top}px`,
-                      height: `${height}px`,
-                      backgroundColor: getEventColor(event),
-                      color: 'white',
-                      fontWeight: '600',
-                    }}
-                  >
-                    <div className="truncate" style={{ fontSize: '1.4vw' }}>{event.title}</div>
-                    <div className="opacity-90" style={{ fontSize: '1.2vw' }}>
-                      {start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+              {/* Timed Events with Smart Overlapping */}
+              {getOverlappingEvents(timedEvents).map((eventGroup) => {
+                return eventGroup.map((event, eventIndex) => {
+                  const start = new Date(event.start);
+                  const end = new Date(event.end);
+                  const startHour = start.getHours();
+                  const startMinute = start.getMinutes();
+                  const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60); // hours
+                  
+                  const top = ((startHour - 6) * 64) + (startMinute / 60 * 64) + 4; // Add 4px for container padding
+                  const height = Math.max(duration * 64, 40) - 8; // Subtract 8px for top/bottom padding
+                  
+                  // Calculate width and left position for overlapping events
+                  const totalEvents = eventGroup.length;
+                  const eventWidth = totalEvents > 1 ? `calc(${100 / totalEvents}% - 8px)` : 'calc(100% - 8px)';
+                  const leftOffset = totalEvents > 1 ? `${(eventIndex * 100) / totalEvents}%` : '0%';
+                  
+                  // Add indentation for overlapping events (like Google Calendar)
+                  const indentAmount = eventIndex > 0 ? 8 : 0;
+                  
+                  return (
+                    <div
+                      key={event.id}
+                      onClick={() => onSelectEvent(event)}
+                      className="absolute rounded-lg px-2 py-1 cursor-pointer shadow-sm tracking-tight"
+                      style={{
+                        top: `${top}px`,
+                        height: `${height}px`,
+                        left: `${leftOffset}`,
+                        width: eventWidth,
+                        marginLeft: `${indentAmount}px`,
+                        backgroundColor: getEventColor(event),
+                        color: 'white',
+                        fontWeight: '600',
+                        zIndex: 10 - eventIndex, // Stack overlapping events
+                      }}
+                    >
+                      <div className="truncate" style={{ fontSize: '1.4vw' }}>{event.title}</div>
+                      <div className="opacity-90" style={{ fontSize: '1.2vw' }}>
+                        {start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      </div>
                     </div>
-                  </div>
-                );
+                  );
+                });
               })}
 
                 {/* Current Time Line */}
                 {isCurrentTimeVisible() && isTodayColumn && (
                   <div
-                    className="absolute left-0 right-0 h-1 margin-top-px bg-red z-20 shadow-lg"
+                    className="absolute left-0 right-0 h-1 margin-top-px bg-red z-20 shadow-lg rounded-full"
                     style={{ top: `${getCurrentTimePosition()}px` }}
                   >
-                    <div className="absolute -left-2 -top-1 w-4 h-4 bg-red rounded-full shadow-md" />
+                    <div className="absolute -left-2 -top-1 w-3 h-3 bg-red rounded-full shadow-md" />
                   </div>
                 )}
 
@@ -337,7 +423,6 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
 };
 
 export const CalendarView = () => {
-  const { syncGoogleCalendar, isSyncing, lastSyncTime } = useGoogleCalendarSync();
   const { data: calendarEvents, isLoading: eventsLoading } = useCalendarEvents();
   const { mutate: createEvent } = useCreateCalendarEvent();
   const { mutate: updateEvent } = useUpdateCalendarEvent();
@@ -443,15 +528,6 @@ export const CalendarView = () => {
   //   }
   // }, [deleteEvent, loadEvents]);
 
-  // Handle sync with Google Calendar
-  const handleSync = useCallback(async () => {
-    try {
-      await syncGoogleCalendar();
-      // Events will automatically refresh via the hook
-    } catch (error) {
-      console.error('Failed to sync with Google Calendar:', error);
-    }
-  }, [syncGoogleCalendar]);
 
   // Event style getter
   const eventStyleGetter = useCallback((event: BigCalendarEvent) => {
@@ -534,55 +610,10 @@ export const CalendarView = () => {
       {/* Header */}
       <div className="mb-6 flex justify-between items-center">
         <div className="flex items-center gap-6">
-          <h2 className="text-5xl font-extrabold tracking-tight text-charcoal">
-            Calendar
+          <h2 className="text-5xl font-light tracking-tighter text-charcoal">
+            {date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h2>
           
-          {/* Sync Button */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSync}
-              disabled={isSyncing}
-              className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                isSyncing
-                  ? 'bg-gray-light text-gray-medium cursor-not-allowed'
-                  : 'bg-gray-light text-gray-dark hover:bg-gray-medium'
-              }`}
-              title={isSyncing ? 'Syncing...' : 'Sync Google Calendar'}
-            >
-              {isSyncing ? (
-                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              )}
-            </button>
-            
-            {events && (
-              <span className="text-sm text-gray-dark font-medium">
-                {events.length} events
-              </span>
-            )}
-            
-            {lastSyncTime && (
-              <span className="text-xs text-gray-medium">
-                Last sync: {lastSyncTime.toLocaleTimeString()}
-              </span>
-            )}
-          </div>
-          
-          {/* Calendar Legend */}
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{ backgroundColor: '#0A95FF' }}></div>
-              <span className="text-gray-600">Manual Events</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{ backgroundColor: '#8B5CF6' }}></div>
-              <span className="text-gray-600">Google Calendar</span>
-            </div>
-          </div>
         </div>
         
         {/* View Controls */}

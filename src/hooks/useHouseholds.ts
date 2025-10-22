@@ -36,34 +36,20 @@ export const useHouseholds = () => {
       if (!user) return [];
       
       try {
-        console.log('🏠 Fetching households for user:', user.uid);
         // Get households where user is a member
         const q = query(
           collection(firestore, 'households'),
           where('members', 'array-contains', user.uid)
         );
         const snapshot = await getDocs(q);
-        console.log('🏠 Raw households snapshot:', snapshot.docs.length, 'households');
         
-        // Log each household's data
-        snapshot.docs.forEach((doc, index) => {
-          const data = doc.data();
-          console.log(`🏠 Household ${index}:`, {
-            id: doc.id,
-            name: data.name,
-            members: data.members,
-            createdBy: data.createdBy
-          });
-        });
         
         const households = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Household));
-        console.log('🏠 Processed households:', households.map(h => `${h.name} (${h.id})`));
         return households;
       } catch (error) {
         console.error('Failed to fetch households:', error);
         // If it's a permissions error, the user might not have any households yet
         if (error instanceof Error && error.message.includes('permissions')) {
-          console.log('No households found or insufficient permissions - user may need to create their first household');
           return [];
         }
         throw error;

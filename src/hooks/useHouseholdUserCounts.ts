@@ -7,10 +7,8 @@ export const useHouseholdUserCounts = (households: Household[]) => {
   return useQuery({
     queryKey: ['householdUserCounts', households.map(h => h.id)],
     queryFn: async () => {
-      console.log('🔢 Fetching household user counts for:', households.map(h => h.name));
       
       if (!households || households.length === 0) {
-        console.log('🔢 No households to count');
         return {};
       }
       
@@ -25,7 +23,6 @@ export const useHouseholdUserCounts = (households: Household[]) => {
           );
           const snapshot = await getDocs(q);
           counts[household.id] = snapshot.docs.length;
-          console.log(`🔢 Household "${household.name}" (${household.id}): ${snapshot.docs.length} users`);
         } catch (error) {
           console.error(`Failed to count users for household ${household.id}:`, error);
           // Fallback to 0 if query fails (not member array length)
@@ -33,7 +30,6 @@ export const useHouseholdUserCounts = (households: Household[]) => {
         }
       }
       
-      console.log('🔢 Final counts:', counts);
       return counts;
     },
     enabled: households && households.length > 0,

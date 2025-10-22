@@ -14,13 +14,11 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
     queryFn: async () => {
       try {
         if (!currentHouseholdId) {
-          console.log('No current household ID, returning empty array');
           return [];
         }
 
         // Return demo data for Demo family
         if (currentHouseholdId === 'demo-family-001') {
-          console.log('Using demo calendar data for Demo family');
           const demoEvents = generateDemoCalendarEvents();
           
           // Filter by date range if provided
@@ -32,7 +30,6 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
             });
           }
           
-          console.log('Demo calendar events:', filteredEvents.length, filteredEvents.map(e => e.title));
           return filteredEvents;
         }
 
@@ -42,8 +39,6 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
         );
         
         const queryPromise = (async () => {
-          console.log('Querying Firestore for calendar events...');
-          console.log('Household ID:', currentHouseholdId);
           
           const q = query(
             collection(firestore, 'calendar-events'),
@@ -51,8 +46,6 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
             orderBy('startTime', 'asc')
           );
           const snapshot = await getDocs(q);
-          console.log('Firestore snapshot size:', snapshot.size);
-          console.log('Firestore docs:', snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })));
           
           let events = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CalendarEvent));
           
@@ -69,8 +62,6 @@ export const useCalendarEvents = (startDate?: Date, endDate?: Date) => {
         
         const events = await Promise.race([queryPromise, timeoutPromise]);
         
-        console.log('Calendar events from Firestore:', events.length, 'events');
-        console.log('Events:', events);
         
         // Return real events from Firestore (no more stub fallback)
         return events;

@@ -1,0 +1,32 @@
+{
+  "name": "KitchenSync - Family Dashboard",
+  "short_name": "KitchenSync",
+  "description": "Your family's central dashboard for schedules, tasks, and memories",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F5DC",
+  "theme_color": "#0A95FF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "lifestyle", "utilities"],
+  "lang": "en-US"
+}
