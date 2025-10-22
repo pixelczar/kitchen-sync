@@ -1164,7 +1164,7 @@ export const SettingsView = () => {
             {/* Loading State */}
             {isActuallySwitching && (
               <div className="p-8 rounded-xl bg-gray-light/30 border border-gray-light text-center">
-                <LoadingSpinnerMedium message="Loading family members..." />
+                <LoadingSpinnerSmall message="Loading family members..." />
               </div>
             )}
 
