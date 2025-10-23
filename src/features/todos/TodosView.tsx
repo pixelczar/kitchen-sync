@@ -16,22 +16,30 @@ const container = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.15,
+      delayChildren: 0.1
     }
   }
 };
 
 const item = {
-  hidden: { opacity: 0, y: 16},
-  show: { 
+  hidden: { 
+    opacity: 0, 
+    y: 30,
+    scale: 0.9
+  },
+  show: (i: number) => ({ 
     opacity: 1, 
     y: 0,
+    scale: 1,
     transition: {
       type: "spring",
-      stiffness: 300,
-      damping: 24
+      stiffness: 260,
+      damping: 20,
+      duration: 0.6,
+      delay: i * 0.1
     }
-  }
+  })
 };
 
 export const TodosView = () => {
@@ -47,6 +55,7 @@ export const TodosView = () => {
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [preselectedUserId, setPreselectedUserId] = useState<string | undefined>();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [modalCardColor, setModalCardColor] = useState<string | undefined>();
   
   // Set initial load to false after component mounts and data is available
   useEffect(() => {
@@ -192,8 +201,10 @@ export const TodosView = () => {
   
   const handleAddTaskForUser = (userId: string) => {
     // Pre-populate task with user assignment
+    const user = users?.find(u => u.id === userId);
     setEditingTask(undefined);
     setPreselectedUserId(userId);
+    setModalCardColor(user?.color);
     setIsModalOpen(true);
   };
   
@@ -212,14 +223,15 @@ export const TodosView = () => {
           <motion.div 
             className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" 
             variants={container}
-            initial={isInitialLoad ? "show" : "hidden"}
+            initial="hidden"
             animate="show"
           >
-            {userTasks.map(({ user, tasks, kudosCount }) => (
+            {userTasks.map(({ user, tasks, kudosCount }, index) => (
               <motion.div 
                 key={user.id} 
                 variants={item}
-                initial={isInitialLoad ? "show" : "hidden"}
+                custom={index}
+                initial="hidden"
                 animate="show"
               >
                 <PersonCard
@@ -303,10 +315,12 @@ export const TodosView = () => {
           setIsModalOpen(false);
           setEditingTask(undefined);
           setPreselectedUserId(undefined);
+          setModalCardColor(undefined);
         }}
         onSave={handleSaveTask}
         task={editingTask || (preselectedUserId ? { assignedTo: preselectedUserId, type: 'chore' } as Task : undefined)}
         mode={editingTask ? 'edit' : 'add'}
+        cardColor={modalCardColor}
       />
     </motion.main>
   );

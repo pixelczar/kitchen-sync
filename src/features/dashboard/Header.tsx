@@ -80,7 +80,7 @@ export const Header = () => {
         {/* Logo and Breadcrumb */}
         <div className="flex items-center gap-3">
           <h1
-            className="text-3xl font-black text-charcoal tracking-tight cursor-pointer hover:opacity-80 transition-opacity"
+            className="text-2xl font-bold text-charcoal tracking-tighter cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => navigate('/settings')}
             title="Open settings"
           >
@@ -106,7 +106,7 @@ export const Header = () => {
           {/* Simple Weather Widget */}
           {weatherData && !isLoading && (
             <motion.button
-              className="flex items-center gap-3 hover:bg-gray-light/20 rounded-xl px-3 py-2 transition-colors cursor-pointer"
+              className="flex items-center gap-3 hover:bg-gray-light/20 rounded-xl px-3 py-2 transition-colors cursor-pointer tracking-tighter" 
               onClick={() => setIsWeatherModalOpen(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -120,7 +120,7 @@ export const Header = () => {
           )}
           
           {/* Date Display */}
-          <div className="text-2xl font-bold text-charcoal tracking-tight">
+          <div className="text-2xl font-bold text-charcoal tracking-tighter">
             {formattedDate}
           </div>
           

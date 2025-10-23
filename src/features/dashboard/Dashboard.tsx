@@ -151,7 +151,7 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
   if (isStillLoading || hasNoData) {
     return (
       <motion.main 
-        className="px-6 pb-40 overflow-y-auto h-full"
+        className="px-6 pb-6 overflow-y-auto h-full"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -240,7 +240,7 @@ export const Dashboard = ({ onTriggerScreensaver }: DashboardProps) => {
   
   return (
     <motion.main 
-      className="px-6 pb-40 overflow-y-auto h-full"
+      className="px-6 pb-6 overflow-y-auto h-full"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}

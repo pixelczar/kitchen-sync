@@ -28,7 +28,6 @@ interface CustomWeekViewProps {
 
 const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: CustomWeekViewProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [calendarHeight, setCalendarHeight] = useState(800);
   const timeGridRef = useRef<HTMLDivElement>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   
@@ -50,29 +49,6 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
     return Math.max(0, Math.min(positionInPixels, 18 * 64));
   }, []);
   
-  // Calculate calendar height based on viewport
-  const calculateCalendarHeight = useCallback(() => {
-    const viewportHeight = window.innerHeight;
-    const headerHeight = 200; // Approximate header height
-    const bottomNavHeight = 100; // Bottom navigation height
-    const padding = 20; // Small padding
-    const availableHeight = viewportHeight - headerHeight - bottomNavHeight - padding;
-    return Math.max(600, availableHeight); // Minimum 600px height
-  }, []);
-
-  // Update calendar height on mount and resize
-  useEffect(() => {
-    const updateHeight = () => {
-      setCalendarHeight(calculateCalendarHeight());
-    };
-    
-    // Initial height calculation
-    updateHeight();
-    
-    // Update on resize
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, [calculateCalendarHeight]);
 
   // Update current time every 30 minutes and auto-scroll to center current time
   useEffect(() => {
@@ -252,8 +228,7 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
   return (
     <div 
       ref={calendarContainerRef}
-      className="flex flex-col custom-week-view w-full max-w-full"
-      style={{ height: `${calendarHeight}px` }}
+      className="flex flex-col custom-week-view w-full max-w-full h-full"
     >
       {/* Day Headers */}
       <div className="flex border-b-2 border-gray-200">
@@ -261,7 +236,7 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
         {weekDays.map((day, index) => (
           <div 
             key={index}
-            className={`flex-1 p-4 text-center border-r border-gray-200 min-w-0 ${
+            className={`flex-1 px-4 py-2 text-center border-r border-gray-200 min-w-0 ${
               isToday(day) ? 'bg-yellow-100' : 'bg-gray-50'
             }`}
           >
@@ -304,11 +279,18 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
       </div>
 
       {/* Time Grid */}
-      <div ref={timeGridRef} className="flex flex-1 overflow-y-auto overflow-x-hidden">
-        {/* Time Labels */}
-        <div className="w-16 bg-gray-50 border-r border-gray-200 flex-shrink-0 min-w-16">
+      <div ref={timeGridRef} className="flex flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+        {/* Time Labels - Ensure proper scrolling with content */}
+        <div 
+          className="w-16 bg-gray-50 border-r border-gray-200 flex-shrink-0 min-w-16 relative"
+          style={{ height: `${timeSlots.length * 64}px` }}
+        >
           {timeSlots.map(hour => (
-            <div key={hour} className="h-16 border-b border-gray-200 flex items-center justify-center">
+            <div 
+              key={hour} 
+              className="h-16 border-b border-gray-200 flex items-center justify-center bg-gray-50 relative z-10"
+              style={{ height: '64px' }}
+            >
               <span className="text-xs font-semibold text-gray-600">
                 {hour === 0 ? '12A' : hour === 12 ? '12P' : hour > 12 ? `${hour - 12}P` : `${hour}A`}
               </span>
@@ -322,9 +304,33 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
           const isTodayColumn = isToday(day);
           
           return (
-            <div key={dayIndex} className="flex-1 border-r border-gray-200 relative min-w-0 p-1">
+            <div key={dayIndex} className="flex-1 relative min-w-0 p-1">
               {/* Time Slots Container */}
               <div className="relative" style={{ height: `${timeSlots.length * 64}px` }}>
+                {/* Horizontal Grid Lines - Separate layer to ensure visibility */}
+                {timeSlots.map((hour, hourIndex) => (
+                  <div
+                    key={`h-grid-${hourIndex}`}
+                    className="absolute left-0 right-0 border-b border-gray-300"
+                    style={{
+                      top: `${(hourIndex + 1) * 64 - 1}px`,
+                      height: '1px',
+                      zIndex: 2
+                    }}
+                  />
+                ))}
+                
+                {/* Vertical Grid Line - Right border for each column */}
+                <div
+                  className="absolute top-0 bottom-0 border-r border-gray-300"
+                  style={{
+                    right: '0px',
+                    width: '1px',
+                    zIndex: 2
+                  }}
+                />
+                
+                {/* Time Slot Click Areas */}
                 {timeSlots.map((hour, hourIndex) => (
                   <div
                     key={hourIndex}
@@ -337,12 +343,13 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
                         slots: [slotDate]
                       });
                     }}
-                    className={`absolute left-0 right-0 border-b border-gray-200 hover:bg-blue-50 cursor-pointer ${
+                    className={`absolute left-0 right-0 hover:bg-blue-50 cursor-pointer ${
                       isTodayColumn ? 'bg-yellow-50' : ''
                     }`}
                     style={{
                       top: `${hourIndex * 64}px`,
-                      height: '64px'
+                      height: '64px',
+                      zIndex: 1
                     }}
                   />
                 ))}
@@ -361,11 +368,11 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
                   
                   // Calculate width and left position for overlapping events
                   const totalEvents = eventGroup.length;
-                  const eventWidth = totalEvents > 1 ? `calc(${100 / totalEvents}% - 8px)` : 'calc(100% - 8px)';
-                  const leftOffset = totalEvents > 1 ? `${(eventIndex * 100) / totalEvents}%` : '0%';
+                  const eventWidth = eventIndex === 0 ? 'calc(100% - 8px)' : `calc(100% - ${(eventIndex + 1) * 20}px)`;
+                  const leftOffset = '0%';
                   
                   // Add indentation for overlapping events (like Google Calendar)
-                  const indentAmount = eventIndex > 0 ? 8 : 0;
+                  const indentAmount = eventIndex * 20;
                   
                   return (
                     <div
@@ -381,11 +388,12 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
                         backgroundColor: getEventColor(event),
                         color: 'white',
                         fontWeight: '600',
-                        zIndex: 10 - eventIndex, // Stack overlapping events
+                        zIndex: 10 + eventIndex, // Rightmost events on top
+                        textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
                       }}
                     >
-                      <div className="truncate" style={{ fontSize: '1.4vw' }}>{event.title}</div>
-                      <div className="opacity-90" style={{ fontSize: '1.2vw' }}>
+                      <div className="truncate" style={{ fontSize: '1.4vw', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{event.title}</div>
+                      <div className="opacity-90" style={{ fontSize: '1.1vw', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>
                         {start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                       </div>
                     </div>
@@ -595,7 +603,7 @@ export const CalendarView = () => {
   // Loading state
   if (isLoading) {
     return (
-      <main className="px-6 pb-40 overflow-y-auto h-full">
+      <main className="px-6 pb-6 overflow-y-auto h-full">
         <div className="flex items-center justify-center py-20">
           <div className="text-xl font-semibold text-gray-medium">
             Loading calendar...
@@ -606,18 +614,18 @@ export const CalendarView = () => {
   }
 
   return (
-    <main className="px-6 pb-40 overflow-y-auto h-full">
+    <main className="px-6 h-full flex flex-col">
       {/* Header */}
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-4 flex justify-between items-center">
         <div className="flex items-center gap-6">
-          <h2 className="text-5xl font-light tracking-tighter text-charcoal">
+          <h2 className="text-4xl font-light tracking-tighter text-charcoal">
             {date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h2>
           
         </div>
         
         {/* View Controls */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           {/* Navigation Controls */}
           <div className="flex gap-2">
             <button
@@ -638,7 +646,7 @@ export const CalendarView = () => {
             </button>
             <button
               onClick={() => setDate(new Date())}
-              className="px-6 py-3 rounded-xl bg-purple hover:bg-purple/80 font-bold text-cream transition-all"
+              className="px-4 py-2 rounded-lg bg-purple hover:bg-purple/80 font-semibold text-cream transition-all"
             >
               Today
             </button>
@@ -680,7 +688,7 @@ export const CalendarView = () => {
       </div>
 
       {/* Custom 4-Day Family Calendar */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex-1">
         {view === 'week' ? (
           <CustomWeekView 
             events={events}

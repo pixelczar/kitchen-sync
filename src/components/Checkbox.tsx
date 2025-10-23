@@ -42,7 +42,7 @@ export const Checkbox = ({
   
   return (
     <div 
-      className="inline-flex items-center gap-3 cursor-pointer min-h-[48px] py-2 px-3 rounded-xl transition-all -left-3 relative"
+      className="flex items-center gap-3 cursor-pointer min-h-[48px] py-2 px-3 rounded-xl transition-all w-full"
       style={{
         backgroundColor: checked ? 'transparent' : (isYellow ? 'rgb(255 255 255 / 30%)' : uncheckedBg),
       }}
@@ -85,7 +85,7 @@ export const Checkbox = ({
       
       {label && (
         <span
-          className="text-base font-semibold transition-all pointer-events-none inline-flex flex-shrink-0"
+          className="text-base font-semibold transition-all pointer-events-none flex-1 truncate"
           style={{ 
             color: textColor,
             opacity: checked ? 0.5 : 1,

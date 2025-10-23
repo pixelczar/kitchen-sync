@@ -7,9 +7,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  cardColor?: string;
 }
 
-export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, title, children, cardColor }: ModalProps) => {
   const setModalOpen = useUIStore((state) => state.setModalOpen);
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop with blue-white tint and blur */}
+          {/* Backdrop with card color tint and blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -31,9 +32,10 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
               exit: { duration: 0.15, ease: [0.4, 0, 0.2, 1] }
             }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-cream/70"
+            className="fixed inset-0 z-50"
             style={{
-              backdropFilter: 'blur(16px)',
+              backgroundColor: cardColor ? `${cardColor}90` : 'rgba(250, 248, 243, 0.7)',
+              backdropFilter: 'blur(32px)',
               WebkitBackdropFilter: 'blur(32px)',
             }}
           />
@@ -41,15 +43,15 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
           {/* Modal */}
           <div className="fixed inset-0 flex items-center justify-center z-50 p-6 pointer-events-none">
             <motion.div
-              initial={{ opacity: 0, scale: 1, y: 30 }}
+              initial={{ opacity: 0, scale: 1, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 1, y: 30 }}
+              exit={{ opacity: 0, scale: 1, y: 4 }}
               transition={{ 
-                duration: 0.4, 
-                ease: [0.4, 0, 0.2, 1],
+                duration: 0.16, 
+                ease: "easeInOut",
                 scale: { type: 'spring', stiffness: 300, damping: 30 },
                 exit: { 
-                  duration: 0.2, 
+                  duration: 0.1, 
                   ease: [0.4, 0, 0.2, 1],
                   scale: { type: 'spring', stiffness: 400, damping: 25 }
                 }
@@ -68,9 +70,14 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
               </div>
               
               {/* Content */}
-              <div className="px-8 py-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+              <motion.div 
+                className="px-8 py-6 overflow-y-auto max-h-[calc(80vh-120px)]"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+              >
                 {children}
-              </div>
+              </motion.div>
             </motion.div>
           </div>
         </>

@@ -23,7 +23,7 @@ export const Layout = ({ children }: LayoutProps) => {
       className="min-h-screen bg-cream overflow-hidden origin-center will-change-transform"
     >
       <Header />
-      <div className="h-[calc(100vh-116px)]">
+      <div className="h-[calc(100vh-81px)]">
         {children}
       </div>
     </motion.div>

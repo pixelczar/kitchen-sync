@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { useUsers } from '../hooks/useUsers';
@@ -10,9 +11,10 @@ interface TaskModalProps {
   onSave: (task: Partial<Task>) => void;
   task?: Task;
   mode: 'add' | 'edit';
+  cardColor?: string;
 }
 
-export const TaskModal = ({ isOpen, onClose, onSave, task, mode }: TaskModalProps) => {
+export const TaskModal = ({ isOpen, onClose, onSave, task, mode, cardColor }: TaskModalProps) => {
   const { data: users } = useUsers();
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(task?.title || '');
@@ -55,10 +57,20 @@ export const TaskModal = ({ isOpen, onClose, onSave, task, mode }: TaskModalProp
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={mode === 'add' ? 'Add Task' : 'Edit Task'}>
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <Modal isOpen={isOpen} onClose={onClose} title={mode === 'add' ? 'Add Task' : 'Edit Task'} cardColor={cardColor}>
+      <motion.form 
+        onSubmit={handleSubmit} 
+        className="space-y-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+      >
         {/* Title */}
-        <div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        >
           <label className="block text-xl font-semibold tracking-tight text-charcoal mb-2">
             Task Name
           </label>
@@ -71,10 +83,14 @@ export const TaskModal = ({ isOpen, onClose, onSave, task, mode }: TaskModalProp
             placeholder="e.g., Make bed, Take out trash"
             required
           />
-        </div>
+        </motion.div>
 
         {/* Type */}
-        <div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        >
           <label className="block text-xl font-semibold tracking-tight text-charcoal mb-2">
             Type
           </label>
@@ -102,18 +118,22 @@ export const TaskModal = ({ isOpen, onClose, onSave, task, mode }: TaskModalProp
               Todo
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Assign To */}
         {type === 'chore' && users && (
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+          >
             <label className="block text-xl font-semibold tracking-tight text-charcoal mb-2">
               Assign To
             </label>
             <select
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-light rounded-xl focus:border-blue focus:outline-none text-base"
+              className="w-full pl-4 pr-12 py-3 border-2 border-gray-light rounded-xl focus:border-blue focus:outline-none text-base"
             >
               <option value="">Unassigned</option>
               {users.map(user => (
@@ -122,29 +142,37 @@ export const TaskModal = ({ isOpen, onClose, onSave, task, mode }: TaskModalProp
                 </option>
               ))}
             </select>
-          </div>
+          </motion.div>
         )}
 
         {/* Recurring */}
-        <div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        >
           <label className="block text-xl font-semibold tracking-tight text-charcoal mb-2">
             Repeats
           </label>
           <select
             value={recurring}
             onChange={(e) => setRecurring(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-light rounded-xl focus:border-blue focus:outline-none text-base"
+            className="w-full pl-4 pr-12 py-3 border-2 border-gray-light rounded-xl focus:border-blue focus:outline-none text-base"
           >
             <option value="none">Does not repeat</option>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
           </select>
-        </div>
+        </motion.div>
 
         {/* Weekly Days */}
         {recurring === 'weekly' && (
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+          >
             <label className="block text-xl font-semibold tracking-tight text-charcoal mb-2">
               Repeat on
             </label>
@@ -170,11 +198,16 @@ export const TaskModal = ({ isOpen, onClose, onSave, task, mode }: TaskModalProp
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Actions */}
-        <div className="flex gap-3 pt-4">
+        <motion.div 
+          className="flex gap-3 pt-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        >
           <Button
             type="button"
             onClick={onClose}
@@ -193,8 +226,8 @@ export const TaskModal = ({ isOpen, onClose, onSave, task, mode }: TaskModalProp
           >
             {mode === 'add' ? 'Add Task' : 'Save Changes'}
           </Button>
-        </div>
-      </form>
+        </motion.div>
+      </motion.form>
     </Modal>
   );
 };

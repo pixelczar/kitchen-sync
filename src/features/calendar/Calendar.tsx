@@ -258,7 +258,7 @@ export const Calendar = () => {
   // Loading state with skeletons
   if (eventsLoading || usersLoading) {
     return (
-      <main className="px-6 pb-40 overflow-y-auto h-full">
+      <main className="px-6 pb-6 overflow-y-auto h-full">
         {/* Header Skeleton */}
         <div className="mb-6">
           <div className="h-12 w-64 bg-gray-light/50 rounded animate-pulse mb-4" />
@@ -307,7 +307,7 @@ export const Calendar = () => {
   const timeSlots = Array.from({ length: 18 }, (_, i) => i + 6); // 6am to 11pm
   
   return (
-    <main className="px-6 pb-40 overflow-y-auto h-full">
+    <main className="px-6 pb-6 overflow-y-auto h-full">
       {/* Header with View Toggle */}
       <div className="mb-6 flex justify-between items-center relative">
         <div className="flex items-center gap-6">
@@ -641,7 +641,7 @@ export const Calendar = () => {
                               whileHover={{ scale: 1.02, y: -2 }}
                               transition={{ type: "spring", stiffness: 300 }}
                             >
-                              <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-10">
                                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}>
                                   {user?.name.charAt(0).toUpperCase()}
                                 </div>
