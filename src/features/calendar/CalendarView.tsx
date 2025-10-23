@@ -308,7 +308,7 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
               {/* Time Slots Container */}
               <div className="relative" style={{ height: `${timeSlots.length * 64}px` }}>
                 {/* Horizontal Grid Lines - Separate layer to ensure visibility */}
-                {timeSlots.map((hour, hourIndex) => (
+                {timeSlots.map((_, hourIndex) => (
                   <div
                     key={`h-grid-${hourIndex}`}
                     className="absolute left-0 right-0 border-b border-gray-300"
@@ -367,7 +367,6 @@ const CustomWeekView = ({ events, onSelectEvent, onSelectSlot, currentDate }: Cu
                   const height = Math.max(duration * 64, 40) - 8; // Subtract 8px for top/bottom padding
                   
                   // Calculate width and left position for overlapping events
-                  const totalEvents = eventGroup.length;
                   const eventWidth = eventIndex === 0 ? 'calc(100% - 8px)' : `calc(100% - ${(eventIndex + 1) * 20}px)`;
                   const leftOffset = '0%';
                   
